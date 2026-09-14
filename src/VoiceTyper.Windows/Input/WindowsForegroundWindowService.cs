@@ -34,7 +34,9 @@ public sealed class WindowsForegroundWindowService : IForegroundWindowService
     public Task<bool> EnsureForegroundAsync(TargetWindow target, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        // Focus restoration belongs to the later injection task; fail closed when focus has moved.
-        return Task.FromResult(IsValid(target) && api.GetForegroundWindow() == target.Handle);
+        if (!IsValid(target)) return Task.FromResult(false);
+        if (api.GetForegroundWindow() == target.Handle) return Task.FromResult(true);
+        // Windows may deny focus restoration. Never inject unless the original owner and foreground both match.
+        return Task.FromResult(api.TrySetForeground(target.Handle) && IsValid(target) && api.GetForegroundWindow() == target.Handle);
     }
 }

@@ -1,10 +1,1 @@
-**/bin/
-**/obj/
-.vs/
-TestResults/
-*.user
-*.suo
-
-# Local credentials
-key.txt
-artifacts/
+/key.txt

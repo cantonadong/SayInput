@@ -96,3 +96,13 @@ Git origin 已设置为用户指定的 GitHub 仓库。没有 fetch 或 push；�
 验证（2026-09-14）：Debug build 0 warning、0 error；整套测试 Windows 30 passed、0 failed，另外两个程序集暂无用例。8 个按键逻辑测试、原生 Hook 十次启停/重启及 Dispose 测试通过。Release self-contained publish 成功；实际 exe 启动、窗口创建、关闭退出码 0。独立代码审查未发现问题。实体键盘“按住 5 秒”尚待用户测试，未声称已完成人工验收。
 
 官方依据：[LowLevelKeyboardProc](https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelkeyboardproc)、[PostThreadMessageW](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-postthreadmessagew)。
+
+## Task 4：目标窗口捕获
+
+Right Alt 按下时同步捕获外部前台窗口的 HWND、PID、进程名和标题，再调度诊断 UI；松开时保留原快照。元数据读取后重新校验窗口及 PID，拒绝自身窗口、已关闭窗口、归属变化和无法读取的进程。EnsureForegroundAsync 当前只验证原窗口仍在前台，焦点恢复留待上屏任务。
+
+验证（2026-09-14）：Release build 成功，0 warning、0 error；Windows 测试 41 passed、0 failed、0 skipped，Core/Volcengine 暂无测试用例。受限沙箱中 5 项 DPAPI 测试因用户配置不可用失败，在本机用户上下文重跑整套测试后全部通过。使用既有本地 NuGet 缓存完成 Windows x64 self-contained Release publish。
+
+测试包：`artifacts/window-test/VoiceTyper.App.exe`，请保留同目录依赖。启动并点击“开始测试”，切到记事本按住右 Alt，再切换到另一个窗口后松开；返回诊断窗口，确认目标仍是按下时的记事本。关闭目标后重新按下时应捕获新的前台窗口。在诊断窗口自身按下时应显示无可用外部窗口。
+
+实体键盘及跨应用人工验收尚未完成；此包仅测试热键与窗口捕获，尚不支持语音输入。

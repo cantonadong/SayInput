@@ -1,0 +1,15 @@
+C:\Me\Dev\SayInput\src\VoiceTyper.Windows\bin\Debug\net8.0-windows\VoiceTyper.Windows.deps.json
+C:\Me\Dev\SayInput\src\VoiceTyper.Windows\bin\Debug\net8.0-windows\VoiceTyper.Windows.dll
+C:\Me\Dev\SayInput\src\VoiceTyper.Windows\bin\Debug\net8.0-windows\VoiceTyper.Windows.pdb
+C:\Me\Dev\SayInput\src\VoiceTyper.Windows\bin\Debug\net8.0-windows\VoiceTyper.Core.dll
+C:\Me\Dev\SayInput\src\VoiceTyper.Windows\bin\Debug\net8.0-windows\VoiceTyper.Core.pdb
+C:\Me\Dev\SayInput\src\VoiceTyper.Windows\obj\Debug\net8.0-windows\VoiceTyper.Windows.csproj.AssemblyReference.cache
+C:\Me\Dev\SayInput\src\VoiceTyper.Windows\obj\Debug\net8.0-windows\VoiceTyper.Windows.GeneratedMSBuildEditorConfig.editorconfig
+C:\Me\Dev\SayInput\src\VoiceTyper.Windows\obj\Debug\net8.0-windows\VoiceTyper.Windows.AssemblyInfoInputs.cache
+C:\Me\Dev\SayInput\src\VoiceTyper.Windows\obj\Debug\net8.0-windows\VoiceTyper.Windows.AssemblyInfo.cs
+C:\Me\Dev\SayInput\src\VoiceTyper.Windows\obj\Debug\net8.0-windows\VoiceTyper.Windows.csproj.CoreCompileInputs.cache
+C:\Me\Dev\SayInput\src\VoiceTyper.Windows\obj\Debug\net8.0-windows\VoiceTyp.1A2643F0.Up2Date
+C:\Me\Dev\SayInput\src\VoiceTyper.Windows\obj\Debug\net8.0-windows\VoiceTyper.Windows.dll
+C:\Me\Dev\SayInput\src\VoiceTyper.Windows\obj\Debug\net8.0-windows\refint\VoiceTyper.Windows.dll
+C:\Me\Dev\SayInput\src\VoiceTyper.Windows\obj\Debug\net8.0-windows\VoiceTyper.Windows.pdb
+C:\Me\Dev\SayInput\src\VoiceTyper.Windows\obj\Debug\net8.0-windows\ref\VoiceTyper.Windows.dll

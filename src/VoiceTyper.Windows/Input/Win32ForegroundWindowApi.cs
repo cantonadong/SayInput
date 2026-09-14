@@ -13,6 +13,7 @@ internal sealed class Win32ForegroundWindowApi : IForegroundWindowApi
         GetWindowThreadProcessId(window, out var processId) != 0 ? checked((int)processId) : 0;
 
     public bool IsWindow(nint window) => NativeIsWindow(window);
+    public bool TrySetForeground(nint window) => SetForegroundWindow(window);
 
     public string GetProcessName(int processId)
     {
@@ -35,6 +36,10 @@ internal sealed class Win32ForegroundWindowApi : IForegroundWindowApi
 
     [DllImport("user32.dll", EntryPoint = "GetForegroundWindow")]
     private static extern nint NativeGetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetForegroundWindow(nint window);
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern uint GetWindowThreadProcessId(nint window, out uint processId);

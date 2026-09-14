@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "VoiceTyper.Volcengine/1.0.0": {
+        "dependencies": {
+          "VoiceTyper.Core": "1.0.0"
+        },
+        "runtime": {
+          "VoiceTyper.Volcengine.dll": {}
+        }
+      },
+      "VoiceTyper.Core/1.0.0": {
+        "runtime": {
+          "VoiceTyper.Core.dll": {
+            "assemblyVersion": "1.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "VoiceTyper.Volcengine/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "VoiceTyper.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

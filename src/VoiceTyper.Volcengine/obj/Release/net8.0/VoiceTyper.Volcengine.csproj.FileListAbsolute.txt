@@ -1,0 +1,16 @@
+C:\Me\Dev\SayInput\src\VoiceTyper.Volcengine\bin\Release\net8.0\VoiceTyper.Volcengine.deps.json
+C:\Me\Dev\SayInput\src\VoiceTyper.Volcengine\bin\Release\net8.0\VoiceTyper.Volcengine.dll
+C:\Me\Dev\SayInput\src\VoiceTyper.Volcengine\bin\Release\net8.0\VoiceTyper.Volcengine.pdb
+C:\Me\Dev\SayInput\src\VoiceTyper.Volcengine\bin\Release\net8.0\VoiceTyper.Core.dll
+C:\Me\Dev\SayInput\src\VoiceTyper.Volcengine\bin\Release\net8.0\VoiceTyper.Core.pdb
+C:\Me\Dev\SayInput\src\VoiceTyper.Volcengine\obj\Release\net8.0\VoiceTyper.Volcengine.csproj.AssemblyReference.cache
+C:\Me\Dev\SayInput\src\VoiceTyper.Volcengine\obj\Release\net8.0\VoiceTyper.Volcengine.GeneratedMSBuildEditorConfig.editorconfig
+C:\Me\Dev\SayInput\src\VoiceTyper.Volcengine\obj\Release\net8.0\VoiceTyper.Volcengine.AssemblyInfoInputs.cache
+C:\Me\Dev\SayInput\src\VoiceTyper.Volcengine\obj\Release\net8.0\VoiceTyper.Volcengine.AssemblyInfo.cs
+C:\Me\Dev\SayInput\src\VoiceTyper.Volcengine\obj\Release\net8.0\VoiceTyper.Volcengine.csproj.CoreCompileInputs.cache
+C:\Me\Dev\SayInput\src\VoiceTyper.Volcengine\obj\Release\net8.0\VoiceTyp.83100C20.Up2Date
+C:\Me\Dev\SayInput\src\VoiceTyper.Volcengine\obj\Release\net8.0\VoiceTyper.Volcengine.dll
+C:\Me\Dev\SayInput\src\VoiceTyper.Volcengine\obj\Release\net8.0\refint\VoiceTyper.Volcengine.dll
+C:\Me\Dev\SayInput\src\VoiceTyper.Volcengine\obj\Release\net8.0\VoiceTyper.Volcengine.pdb
+C:\Me\Dev\SayInput\src\VoiceTyper.Volcengine\obj\Release\net8.0\ref\VoiceTyper.Volcengine.dll
+C:\Me\Dev\SayInput\src\VoiceTyper.Volcengine\obj\Release\net8.0\VoiceTyper.Volcengine.sourcelink.json

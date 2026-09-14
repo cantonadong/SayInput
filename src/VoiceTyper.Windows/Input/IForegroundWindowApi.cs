@@ -7,4 +7,5 @@ internal interface IForegroundWindowApi
     string GetProcessName(int processId);
     string GetTitle(nint window);
     bool IsWindow(nint window);
+    bool TrySetForeground(nint window);
 }

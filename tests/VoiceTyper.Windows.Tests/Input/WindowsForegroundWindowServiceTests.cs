@@ -104,5 +104,6 @@ public sealed class WindowsForegroundWindowServiceTests
         public string GetProcessName(int processId) => ReadName(processId);
         public string GetTitle(nint window) => ReadTitle(window);
         public bool IsWindow(nint window) => Exists;
+        public bool TrySetForeground(nint window) => false;
     }
 }
