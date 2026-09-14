@@ -1,0 +1,98 @@
+# VoiceTyper
+
+Windows 10/11 x64 全局按住说话工具，使用 .NET 8、C# 12 和 WPF。
+
+当前已实现 Task 1–3：工程契约、设置/安全凭据、Right Alt Hook。提供可独立运行的热键测试窗口；尚无录音、识别、托盘或文本上屏功能。Task 3 的实体键盘按住 5 秒测试待人工确认。
+
+## 规格
+
+`DEVELOPMENT.md` 是从用户提供的 `spec.md` 原样复制的开发规格。后续以 DEVELOPMENT.md 为权威，spec.md 保留为原始输入。每次只执行一个 Task，完成并验证后停止。
+
+## 项目边界
+
+- `VoiceTyper.Core`：平台无关接口、record、状态枚举；无外部包。
+- `VoiceTyper.Windows`：Windows 平台适配，现已实现 JSON 设置、原子文件写入和 DPAPI 凭据存储。
+- `VoiceTyper.Volcengine`：Provider 适配项目，目前仅引用 Core。
+- `VoiceTyper.App`：WPF 入口，引用三个项目；后续承担依赖注入和 UI。
+- `tests/`：三个 xUnit 项目；Windows 项目现有 30 个设置/凭据/热键测试，Core 和 Volcengine 暂无测试用例。
+
+NAudio、CommunityToolkit.Mvvm、Microsoft.Extensions.DependencyInjection、Logging、Options 在相应实现任务引入，避免骨架阶段增加未使用依赖。
+
+## 构建
+
+安装 Windows x64 .NET 8 SDK 后，在根目录运行：
+
+```powershell
+dotnet restore
+dotnet build VoiceTyper.sln -c Debug
+dotnet test VoiceTyper.sln -c Debug
+```
+
+本次开发使用的临时 SDK 位于 `C:\Users\Carl\AppData\Local\Temp\sayinput-dotnet`。如未安装全局 SDK，可在当前 PowerShell 会话设置：
+
+```powershell
+$env:PATH = "C:\Users\Carl\AppData\Local\Temp\sayinput-dotnet;$env:PATH"
+$env:DOTNET_ROOT = 'C:\Users\Carl\AppData\Local\Temp\sayinput-dotnet'
+```
+
+## 契约约定
+
+- 第 19 节指定的音频和识别接口保持原签名。
+- AudioChunk 是 16 kHz、16-bit、单声道小端 PCM；生产者必须保证内存在消费完成前有效，不能在异步消费者仍使用时复用缓冲。
+- RecognitionUpdated 带 SessionId，用于识别过期回调；partial 只能显示，CompleteAsync 返回 final。
+- DictationSession 保存最初目标窗口，不保存识别器或设备资源。
+- Core 不定义 Provider 鉴权格式。ICredentialStore 用于 OS 保护存储，AppSettings 不包含 Secret。Provider 的非敏感配置在 Task 2 按官方接口需求补充。
+- 性能时间差使用单调时钟，Snapshot 返回后不可继续变动。
+- 其余接口是依据模块职责补充的最小契约；状态转换、音频和输入行为尚未实现。
+
+## 后续规格问题
+
+1. 750 ms 覆盖式 ring buffer 不能独自保证 800 ms 建连期间的首部音频不丢失。Task 6/11 前需要明确 bounded queue 容量和溢出处理，不能静默覆盖首部。
+2. Idle 关闭麦克风时，本地缓冲不能恢复设备开始采集之前的声音；需要实际测量启动延迟，不能声称绝对零丢字。
+3. 状态图没有定义 Starting 时 Right Alt UP 的处理；Task 16 前需确定如何停止并完成短会话。
+
+以上问题不影响 Task 1 的声明和项目边界，本任务不擅自修改对应行为。
+
+## Task 1 验证结果（2026-09-14）
+
+- SDK：本机临时目录 .NET SDK 8.0.425，Windows x64。
+- `dotnet restore`：成功，7 个项目。首次遇到沙箱用户配置目录访问和 NuGet 网络问题；使用进程级临时 APPDATA、CLI_HOME、NUGET_PACKAGES 并允许下载依赖后成功。
+- `dotnet build VoiceTyper.sln -c Debug`：成功，0 warning、0 error。
+- `dotnet test VoiceTyper.sln -c Debug`：退出码 0，三个测试程序集均报告没有测试用例。Task 1 仅接口和工程骨架，此结果不代表任何业务功能已测试。
+- 独立代码审查：现有 Core Contract 和依赖边界无问题；审查时待加入的三个测试项目现已全部加入解决方案。
+- 规格副本 SHA256 与原始 spec.md 一致。
+- 尚无语音输入功能可供人工测试；Task 2 未开始。
+
+Git origin 已设置为用户指定的 GitHub 仓库。没有 fetch 或 push；只有用户明确要求时才允许上传。`key.txt` 已加入 .gitignore，本任务未读取密钥。Windows 所有权检查需要时仅使用命令级 `-c safe.directory=C:/Me/Dev/SayInput`，未改变全局 Git 配置。
+
+## Task 2：设置与安全凭据
+
+- `src/VoiceTyper.Windows/Settings/JsonSettingsStore.cs`：默认保存到 `%LOCALAPPDATA%/VoiceTyper/settings.json`。不存在、损坏或 null 配置使用默认值，加载不覆盖原文件；权限和 IO 错误正常上抛。
+- `src/VoiceTyper.Windows/Security/DpapiCredentialStore.cs`：使用 DPAPI CurrentUser，凭据单独加密保存到 `%LOCALAPPDATA%/VoiceTyper/credentials/`。密钥名称的 SHA256 用于安全文件名及额外 entropy；不输出凭据，明文字节在转换后清零。
+- `src/VoiceTyper.Windows/Storage/AtomicFile.cs`：同目录临时文件写入、flush 到磁盘，再替换目标文件。串行处理低频保存，取消/替换失败保留旧文件，尽力清理临时文件。
+- 测试使用临时目录和虚构 secret，覆盖默认值、坏 JSON、部分配置、读写往返、并发保存、失败保留旧文件、取消、真实 DPAPI 解密、损坏密文、路径隔离及删除。
+- 新增依赖：Microsoft `System.Security.Cryptography.ProtectedData` 8.0.0。
+
+验证（2026-09-14）：restore 成功；Debug build 0 warning、0 error；整套 test 成功，Windows 20 passed、0 failed、0 skipped，另两个测试程序集暂无用例。真实 DPAPI 测试需要加载当前 Windows 用户配置的本机进程，受限沙箱无法访问保护密钥。本次最终测试在本机用户上下文完成。
+
+参考：[Microsoft DPAPI 文档](https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.protecteddata?view=net-8.0)。
+
+当前没有语音输入测试版；按规格 Task 2 完成后停止，下一项为 Task 3（Right Alt 全局 Hook）。未读取 key.txt，未执行 push。
+
+## Task 3：Right Alt Hook 与本机热键测试版
+
+启动 `artifacts/hotkey-test/VoiceTyper.App.exe`。这是 Windows x64 self-contained Release 包，无需另装 .NET；请保留同目录全部依赖文件。此版本仅测试热键，不能语音输入。
+
+1. 点击“开始测试”。
+2. 切到记事本，按住右 Alt 约 5 秒，再松开。
+3. 返回测试窗口，确认“按下 1 次 · 松开 1 次”，时长接近 5 秒。
+4. 重复一次应各变为 2；左 Alt 和其他普通按键不能增加计数。
+5. 点击“停止测试”后再按右 Alt，计数不变；关闭窗口退出。
+
+启用时右 Alt 专用于测试并被消费；其他键、软件注入键放行，不记录用户其他输入。事件订阅者必须快速返回，只能异步调度 UI/网络等工作，不能在 Hook 回调内调用 Start/Stop/Dispose。独立线程使用阻塞 GetMessage，没有键盘轮询或高频 Timer。
+
+新增 `src/VoiceTyper.Windows/Keyboard/` 三个实现文件、供测试访问 internal 类型的 AssemblyInfo，以及 `tests/VoiceTyper.Windows.Tests/Keyboard/` 两个测试文件。App MainWindow 改为显式启用/停止的诊断窗口。
+
+验证（2026-09-14）：Debug build 0 warning、0 error；整套测试 Windows 30 passed、0 failed，另外两个程序集暂无用例。8 个按键逻辑测试、原生 Hook 十次启停/重启及 Dispose 测试通过。Release self-contained publish 成功；实际 exe 启动、窗口创建、关闭退出码 0。独立代码审查未发现问题。实体键盘“按住 5 秒”尚待用户测试，未声称已完成人工验收。
+
+官方依据：[LowLevelKeyboardProc](https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelkeyboardproc)、[PostThreadMessageW](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-postthreadmessagew)。
