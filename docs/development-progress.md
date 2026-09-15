@@ -236,3 +236,12 @@
 - 正常 Windows 用户上下文最终 Release 非硬件测试 126/126 通过（Core 16、Volcengine 28、Windows 82）。受限上下文的5项 DPAPI 环境失败在正常用户上下文全部通过。
 - 最终候选 EXE `FileVersion=1.0.0.0`、`ProductVersion=1.0.0`。压缩包含477个公共文件，隐私扫描确认不含 `data`、`recordings` 或 `key.txt`；SHA-256 为 `0463F29ED55E179EF2DA45A97130AAEB3A55EAC867E85525E297192409A11EE1`。
 - Git 暂存区共72个有意文件，排除所有 `bin`、`obj`、`artifacts`、便携数据、录音、快捷方式和 `key.txt`；使用本机 key 的连续 ASCII token 对暂存 diff 做精确比对，命中数为0。
+
+## 2026-09-15：v1.0.0 正式发布完成
+
+- 正式源码提交 `0a7d800` 已直接推送到 `origin/main`，未创建功能分支或发布分支。
+- GitHub Release `v1.0.0` 已创建为 latest 正式版本，状态为公开、非草稿、非预发布。附件为 `VoiceTyper-1.0.0-win-x64.zip`（71,367,419 bytes）和 `SHA256SUMS.txt`。
+- GitHub 返回的附件 digest 为 `sha256:0463f29ed55e179ef2da45a97130aaeb3a55eac867e85525e297192409a11ee1`，与本地最终候选完全一致。
+- Codex 全局规则新增：所有仓库永远直接使用 `main`，禁止创建、切换、推送或使用功能/发布分支，以保持多电脑线性同步。
+- GitHub CLI 已执行 `gh auth setup-git`，凭据持久保存在 Windows keyring；`gh auth status` 确认账号 `cantonadong` 活跃，HTTPS Git 协议和 repo/workflow 权限有效。后续发版复用该凭据，不重复启动登录流程。
+- Release 页面：https://github.com/cantonadong/SayInput/releases/tag/v1.0.0
