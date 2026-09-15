@@ -6,8 +6,8 @@ public sealed record VolcengineOptions
     public string AppId { get; init; } = "";
     public string AccessToken { get; init; } = "";
     public string ApiKey { get; init; } = "";
-    public string ResourceId { get; init; } = "volc.bigasr.sauc.duration";
-    public Uri Endpoint { get; init; } = new("wss://openspeech.bytedance.com/api/v3/sauc/bigmodel");
+    public string ResourceId { get; init; } = "volc.seedasr.sauc.duration";
+    public Uri Endpoint { get; init; } = new("wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async");
 
     public override string ToString() => "VolcengineOptions { Credentials = [redacted] }";
 

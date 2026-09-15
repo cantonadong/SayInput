@@ -9,6 +9,24 @@ namespace VoiceTyper.Core.Tests;
 
 public sealed class CoordinatorTests
 {
+    [Fact]
+    public async Task One_hundred_completed_sessions_restart_and_inject_each_final_once()
+    {
+        var injection = new Injection();
+        var sequence = 0;
+        await using var coordinator = new DictationCoordinator(() => new PipelineTests.FakeAudio(),
+            () => new PipelineTests.FakeSpeech { Text = (++sequence).ToString() },
+            new Windows(), new Overlay(), injection, new PerformanceMetrics());
+        for (var i = 0; i < 100; i++)
+        {
+            Assert.True(coordinator.TryStart());
+            coordinator.Release();
+            await coordinator.Completion.WaitAsync(TimeSpan.FromSeconds(2));
+            Assert.Equal(DictationState.Idle, coordinator.State);
+        }
+        Assert.Equal(Enumerable.Range(1, 100).Select(value => value.ToString()), injection.Text);
+    }
+
     [Theory]
     [InlineData(false, "你好", true, 1)]
     [InlineData(false, "", true, 0)]
@@ -38,13 +56,33 @@ public sealed class CoordinatorTests
     public async Task Cancel_during_connection_cleans_up_and_allows_next_session()
     {
         var audio = new PipelineTests.FakeAudio();
+        var outcomes = new List<DictationCompletion>();
         await using var coordinator = new DictationCoordinator(() => audio,
             () => new PipelineTests.FakeSpeech { Delay = 1000 }, new Windows(), new Overlay(), new Injection(), new PerformanceMetrics());
+        coordinator.Finished += (_, outcome, _, _) => outcomes.Add(outcome);
         Assert.True(coordinator.TryStart());
         await coordinator.CancelAsync();
         Assert.Equal(DictationState.Idle, coordinator.State);
         Assert.True(coordinator.TryStart());
         await coordinator.CancelAsync();
+        Assert.All(outcomes, outcome => Assert.Equal(DictationCompletion.NoSpeech, outcome));
+    }
+
+    [Fact]
+    public async Task Empty_final_is_reported_instead_of_silently_succeeding()
+    {
+        string? failure = null;
+        var outcome = DictationCompletion.Failed;
+        await using var coordinator = new DictationCoordinator(() => new PipelineTests.FakeAudio(),
+            () => new PipelineTests.FakeSpeech { Text = "" }, new Windows(), new Overlay(), new Injection(), new PerformanceMetrics());
+        coordinator.Finished += (_, result, error, _) => { outcome = result; failure = error; };
+
+        Assert.True(coordinator.TryStart());
+        coordinator.Release();
+        await coordinator.Completion.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Null(failure);
+        Assert.Equal(DictationCompletion.NoSpeech, outcome);
     }
     private sealed class Windows : IForegroundWindowService
     {

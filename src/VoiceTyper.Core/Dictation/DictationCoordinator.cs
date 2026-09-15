@@ -20,7 +20,7 @@ public sealed class DictationCoordinator(Func<IAudioCaptureService> createAudio,
     public string? MicrophoneDeviceId { get; set; }
     public Task Completion { get { lock (gate) return completion; } }
     public event Action<Guid, DictationState>? StateChanged;
-    public event Action<SessionPerformanceMetrics, string?, string?>? Finished;
+    public event Action<SessionPerformanceMetrics, DictationCompletion, string?, string?>? Finished;
 
     public bool TryStart()
     {
@@ -59,6 +59,7 @@ public sealed class DictationCoordinator(Func<IAudioCaptureService> createAudio,
     private async Task RunAsync(Guid id, TargetWindow target, Task released, string? deviceId, CancellationToken ct)
     {
         string? failure = null, final = null;
+        var outcome = DictationCompletion.Succeeded;
         IAudioCaptureService? audio = null;
         IStreamingSpeechRecognizer? speech = null;
         void Partial(object? sender, SpeechRecognitionEvent update)
@@ -84,7 +85,9 @@ public sealed class DictationCoordinator(Func<IAudioCaptureService> createAudio,
             SetState(id, DictationState.Finalizing);
             final = (await speech.CompleteAsync(ct).ConfigureAwait(false)).Text;
             metrics.Mark(id, PerformanceEvent.FinalReceived);
-            if (!string.IsNullOrWhiteSpace(final))
+            if (string.IsNullOrWhiteSpace(final))
+                outcome = DictationCompletion.NoSpeech;
+            else
             {
                 ct.ThrowIfCancellationRequested();
                 if (!windows.IsValid(target)) throw new InvalidOperationException("原输入窗口已关闭，请从设置窗口复制本次文字。");
@@ -95,13 +98,14 @@ public sealed class DictationCoordinator(Func<IAudioCaptureService> createAudio,
                 if (!result.Succeeded) throw new InvalidOperationException(result.ErrorMessage ?? "输入失败，请从设置窗口复制本次文字。");
             }
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { outcome = DictationCompletion.NoSpeech; }
         catch (Exception error)
         {
             // Adapter messages are bounded and credential-free; never include arbitrary provider response bodies.
             failure = error is InvalidOperationException or IOException or TimeoutException
                 ? error.Message : "录音或识别失败，请检查麦克风、网络和凭据后重试。";
             SetState(id, DictationState.Failed);
+            outcome = DictationCompletion.Failed;
         }
         finally
         {
@@ -126,7 +130,7 @@ public sealed class DictationCoordinator(Func<IAudioCaptureService> createAudio,
                 lifetime?.Dispose(); lifetime = null;
                 SetState(id, DictationState.Idle);
             }
-            Finished?.Invoke(snapshot, failure, failure is null ? null : final);
+            Finished?.Invoke(snapshot, outcome, failure, failure is null ? null : final);
         }
     }
     private void SetState(Guid id, DictationState value) { state = value; StateChanged?.Invoke(id, value); }

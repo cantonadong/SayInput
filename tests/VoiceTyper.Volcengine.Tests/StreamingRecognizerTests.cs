@@ -12,6 +12,57 @@ namespace VoiceTyper.Volcengine.Tests;
 public sealed class StreamingRecognizerTests
 {
     [Theory]
+    [InlineData(401, "Speech credentials were rejected.")]
+    [InlineData(403, "Speech resource is not enabled for these credentials.")]
+    [InlineData(429, "Speech service rate limit was reached.")]
+    [InlineData(500, "Speech service is temporarily unavailable.")]
+    public async Task Upgrade_failure_reports_safe_actionable_category(int status, string message)
+    {
+        await using var server = new SocketServer();
+        await using var recognizer = new VolcengineStreamingRecognizer(Options(server, true));
+        var serving = server.RejectAsync(status);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            recognizer.StartAsync(new(Guid.NewGuid()), default));
+
+        Assert.Equal(message, error.Message);
+        Assert.DoesNotContain("test-key", error.ToString());
+        await serving.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
+    public async Task TerminalBeforeEndOfAudioNeverReturnsTruncatedSessionText()
+    {
+        await using var server = new SocketServer();
+        await using var recognizer = new VolcengineStreamingRecognizer(Options(server));
+        var earlyResponse = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var terminalUpdates = 0;
+        recognizer.RecognitionUpdated += (_, update) =>
+        {
+            if (update.IsFinal) Interlocked.Increment(ref terminalUpdates);
+            earlyResponse.TrySetResult();
+        };
+        var serving = Task.Run(async () =>
+        {
+            using var socket = await server.AcceptAsync();
+            await SocketServer.ReceiveAsync(socket);
+            // A terminal response to the configuration cannot include the microphone audio.
+            await socket.SendAsync(SeedProtocolTests.Response("{\"result\":{\"text\":\"truncated\"}}", 2), WebSocketMessageType.Binary, true, default);
+            try { await SocketServer.ReceiveAsync(socket); } catch (WebSocketException) { }
+        });
+        var error = await Record.ExceptionAsync(async () =>
+        {
+            await recognizer.StartAsync(new(Guid.NewGuid()), default);
+            await earlyResponse.Task.WaitAsync(TimeSpan.FromSeconds(2));
+            await recognizer.SendAudioAsync(new byte[100], default);
+            await recognizer.CompleteAsync(default);
+        });
+        Assert.IsType<InvalidDataException>(error);
+        Assert.Equal(0, terminalUpdates);
+        await serving.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task StreamsBatchesAndTailAndReturnsOnlyTerminalCumulativeText(bool apiKey)
@@ -246,6 +297,21 @@ internal sealed class SocketServer : IAsyncDisposable
         var accept = Convert.ToBase64String(SHA1.HashData(Encoding.ASCII.GetBytes(Headers["Sec-WebSocket-Key"] + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")));
         await stream.WriteAsync(Encoding.ASCII.GetBytes($"HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: {accept}\r\n\r\n"));
         return WebSocket.CreateFromStream(stream, true, null, Timeout.InfiniteTimeSpan);
+    }
+
+    public async Task RejectAsync(int status)
+    {
+        using var client = await listener.AcceptTcpClientAsync();
+        var stream = client.GetStream();
+        var header = new List<byte>();
+        var one = new byte[1];
+        while (header.Count < 16384)
+        {
+            if (await stream.ReadAsync(one) == 0) throw new IOException("Client disconnected during upgrade.");
+            header.Add(one[0]);
+            if (header.Count >= 4 && Encoding.ASCII.GetString(header.TakeLast(4).ToArray()) == "\r\n\r\n") break;
+        }
+        await stream.WriteAsync(Encoding.ASCII.GetBytes($"HTTP/1.1 {status} Rejected\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"));
     }
 
     public static async Task<byte[]> ReceiveAsync(WebSocket socket)

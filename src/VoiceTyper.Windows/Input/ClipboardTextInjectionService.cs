@@ -11,7 +11,7 @@ public sealed class ClipboardTextInjectionService(IForegroundWindowService windo
         {
             cancellationToken.ThrowIfCancellationRequested();
             DataObject? saved = null;
-            var existing = Clipboard.GetDataObject();
+            var existing = ClipboardRetry.Run(Clipboard.GetDataObject);
             if (existing is not null)
             {
                 saved = new DataObject();
@@ -22,7 +22,7 @@ public sealed class ClipboardTextInjectionService(IForegroundWindowService windo
                     if (data is not null) saved.SetData(format, data, false);
                 }
             }
-            Clipboard.SetDataObject(text, true);
+            ClipboardRetry.Run(() => Clipboard.SetDataObject(text, true));
             var version = GetClipboardSequenceNumber();
             if (!windows.EnsureForegroundAsync(target, cancellationToken).GetAwaiter().GetResult() || KeyboardInput.ModifiersDown())
                 return new(false, true, "无法安全输入原窗口，文字已复制，可手动粘贴。");
@@ -36,12 +36,20 @@ public sealed class ClipboardTextInjectionService(IForegroundWindowService windo
             // Slow applications may need manual paste mode instead of automatic restoration.
             Thread.Sleep(350);
             if (GetClipboardSequenceNumber() == version)
-                try { if (saved is null) Clipboard.Clear(); else Clipboard.SetDataObject(saved, true); }
+                try
+                {
+                    if (saved is null) ClipboardRetry.Run(Clipboard.Clear);
+                    else ClipboardRetry.Run(() => Clipboard.SetDataObject(saved, true));
+                }
                 catch (ExternalException) { }
             return new(true, false);
         });
 
-    public static Task<bool> CopyAsync(string text) => OnSta(() => { Clipboard.SetDataObject(text, true); return true; });
+    public static Task<bool> CopyAsync(string text) => OnSta(() =>
+    {
+        ClipboardRetry.Run(() => Clipboard.SetDataObject(text, true));
+        return true;
+    });
 
     private static Task<T> OnSta<T>(Func<T> operation)
     {
@@ -56,4 +64,20 @@ public sealed class ClipboardTextInjectionService(IForegroundWindowService windo
         return completion.Task;
     }
     [DllImport("user32.dll")] private static extern uint GetClipboardSequenceNumber();
+}
+
+internal static class ClipboardRetry
+{
+    private const int Attempts = 5;
+
+    public static void Run(Action operation) => Run(() => { operation(); return true; });
+
+    public static T Run<T>(Func<T> operation)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try { return operation(); }
+            catch (ExternalException) when (attempt < Attempts) { Thread.Sleep(20); }
+        }
+    }
 }

@@ -22,6 +22,8 @@ public sealed class RightAltHotkeyService : IHotkeyService
 
     public event EventHandler? Pressed;
     public event EventHandler? Released;
+    public event EventHandler? Cancelled;
+    public volatile bool CancelEnabled;
 
     public RightAltHotkeyService() => callback = OnKeyboard;
 
@@ -123,9 +125,10 @@ public sealed class RightAltHotkeyService : IHotkeyService
             try
             {
                 var input = Marshal.PtrToStructure<KeyboardNative.KeyboardData>(data);
-                var decision = keys.Process(input.VirtualKey, (uint)message, input.Flags);
+                var decision = keys.Process(input.VirtualKey, (uint)message, input.Flags, CancelEnabled);
                 if (decision.Edge == KeyEdge.Pressed) Notify(Pressed);
                 else if (decision.Edge == KeyEdge.Released) Notify(Released);
+                else if (decision.Edge == KeyEdge.Cancelled) Notify(Cancelled);
                 if (decision.Suppress) return 1;
             }
             catch (Exception)

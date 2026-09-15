@@ -49,7 +49,7 @@ public sealed class VolcengineStreamingRecognizer : IStreamingSpeechRecognizer
         }
         catch (Exception ex)
         {
-            var failure = SafeFailure(ex, cancellationToken, session.Token, "Speech connection timed out.");
+            var failure = SafeFailure(ex, cancellationToken, session.Token, "Speech connection timed out.", session.Socket);
             Close(session);
             session.Dispose();
             throw failure;
@@ -140,6 +140,7 @@ public sealed class VolcengineStreamingRecognizer : IStreamingSpeechRecognizer
 
     private void SetHeaders(ClientWebSocket socket, Guid id)
     {
+        socket.Options.CollectHttpResponseDetails = true;
         if (!string.IsNullOrWhiteSpace(options.ApiKey)) socket.Options.SetRequestHeader("X-Api-Key", options.ApiKey);
         else
         {
@@ -190,6 +191,8 @@ public sealed class VolcengineStreamingRecognizer : IStreamingSpeechRecognizer
         if (session.Token.IsCancellationRequested) return;
         if (response.IsFinal)
         {
+            if (!session.Completing)
+                throw new InvalidDataException("Speech service ended the session before all audio was sent.");
             // Utterance `definite` is not a session final; only the terminal frame settles completion.
             if (session.Final.TrySetResult(new(response.Text)))
                 RecognitionUpdated?.Invoke(this, new(session.Id, response.Text, true));
@@ -216,10 +219,19 @@ public sealed class VolcengineStreamingRecognizer : IStreamingSpeechRecognizer
         lock (sync) { if (ReferenceEquals(current, session)) current = null; }
     }
 
-    private static Exception SafeFailure(Exception error, CancellationToken caller, CancellationToken lifetime, string timeoutMessage)
+    private static Exception SafeFailure(Exception error, CancellationToken caller, CancellationToken lifetime, string timeoutMessage,
+        ClientWebSocket? socket = null)
     {
         if (caller.IsCancellationRequested || lifetime.IsCancellationRequested) return new OperationCanceledException("Speech session was cancelled.");
         if (error is OperationCanceledException) return new TimeoutException(timeoutMessage);
+        if (socket is not null)
+        {
+            var status = (int)socket.HttpStatusCode;
+            if (status == 401) return new InvalidOperationException("Speech credentials were rejected.");
+            if (status == 403) return new InvalidOperationException("Speech resource is not enabled for these credentials.");
+            if (status == 429) return new InvalidOperationException("Speech service rate limit was reached.");
+            if (status >= 500) return new InvalidOperationException("Speech service is temporarily unavailable.");
+        }
         if (error is InvalidDataException) return new InvalidDataException("Invalid or incomplete speech service response.");
         if (error is InvalidOperationException && error.Message.StartsWith("Speech service error (", StringComparison.Ordinal))
             return new InvalidOperationException(error.Message);
@@ -239,7 +251,7 @@ public sealed class VolcengineStreamingRecognizer : IStreamingSpeechRecognizer
         public byte[] ReceiveBuffer { get; } = new byte[8192];
         public int Count { get; set; }
         public bool Ready { get; set; }
-        public bool Completing { get; set; }
+        public volatile bool Completing;
         public Task Receiver { get; set; } = Task.CompletedTask;
         public TaskCompletionSource<DictationResult> Final { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 

@@ -35,4 +35,5 @@ public sealed class AudioTests
     public async Task Cancelled_warmup_does_not_open_devices() =>
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             new AudioWarmupService().WarmupAsync(new CancellationToken(true)));
+
 }

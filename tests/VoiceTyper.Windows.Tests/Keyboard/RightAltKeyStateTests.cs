@@ -43,4 +43,13 @@ public sealed class RightAltKeyStateTests
         Assert.Equal(new KeyDecision(true, KeyEdge.None), state.Process(0xA5, 0x101, 0));
         Assert.Equal(new KeyDecision(true, KeyEdge.Pressed), state.Process(0xA5, 0x104, 0));
     }
+
+    [Fact]
+    public void Escape_is_only_suppressed_and_emitted_while_cancellation_is_enabled()
+    {
+        var state = new RightAltKeyState();
+        Assert.Equal(default, state.Process(0x1B, 0x100, 0, false));
+        Assert.Equal(new KeyDecision(true, KeyEdge.Cancelled), state.Process(0x1B, 0x100, 0, true));
+        Assert.Equal(new KeyDecision(true, KeyEdge.None), state.Process(0x1B, 0x101, 0, true));
+    }
 }

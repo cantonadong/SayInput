@@ -53,7 +53,10 @@ public sealed class AudioPipeline(IAudioCaptureService audio, IStreamingSpeechRe
             {
                 if (stopper is not null)
                     try { await stopper.ConfigureAwait(false); } catch (OperationCanceledException) { }
-                await audio.StopAsync(CancellationToken.None).ConfigureAwait(false);
+                if (cancellationToken.IsCancellationRequested && audio is IAbortableAudioCaptureService abortable)
+                    await abortable.AbortAsync().ConfigureAwait(false);
+                else
+                    await audio.StopAsync(CancellationToken.None).ConfigureAwait(false);
             }
             finally { audio.AudioAvailable -= OnAudio; queue.Writer.TryComplete(); }
         }
