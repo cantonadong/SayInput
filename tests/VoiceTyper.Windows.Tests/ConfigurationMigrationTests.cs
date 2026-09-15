@@ -35,11 +35,51 @@ public sealed class ConfigurationMigrationTests
         var name = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes("volcengine-options-v1"))) + ".bin";
         await File.WriteAllBytesAsync(Path.Combine(paths.CredentialDirectory, name), [1, 2, 3, 4]);
 
-        var configuration = new ConfigurationService(paths);
+        var configuration = new ConfigurationService(paths, new RecordingStartupRegistration());
         await configuration.LoadAsync();
 
         Assert.True(configuration.CredentialsNeedReentry);
         Assert.False(configuration.HasCredentials);
         Assert.True(File.Exists(Path.Combine(paths.CredentialDirectory, name)));
+    }
+
+    [Fact]
+    public async Task Saving_reconciles_startup_registration_even_when_preference_value_is_unchanged()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "SayInputTests", Guid.NewGuid().ToString("N"));
+        var registration = new RecordingStartupRegistration();
+        var paths = new PortablePaths(root);
+        paths.EnsureAndMigrate();
+        await File.WriteAllTextAsync(paths.SettingsPath, "{\"StartWithWindows\":true}");
+        var configuration = new ConfigurationService(paths, registration);
+
+        await configuration.SaveAsync(new(), new()
+        {
+            ApiKey = "synthetic-key",
+            ResourceId = "volc.seedasr.sauc.duration"
+        });
+
+        Assert.Equal([true], registration.Values);
+    }
+
+    [Fact]
+    public async Task Loading_reconciles_startup_registration_for_existing_preferences()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "SayInputTests", Guid.NewGuid().ToString("N"));
+        var registration = new RecordingStartupRegistration();
+        var paths = new PortablePaths(root);
+        paths.EnsureAndMigrate();
+        await File.WriteAllTextAsync(paths.SettingsPath, "{\"StartWithWindows\":true}");
+        var configuration = new ConfigurationService(paths, registration);
+
+        await configuration.LoadAsync();
+
+        Assert.Equal([true], registration.Values);
+    }
+
+    private sealed class RecordingStartupRegistration : IStartupRegistration
+    {
+        public List<bool> Values { get; } = [];
+        public void Apply(bool enabled) => Values.Add(enabled);
     }
 }

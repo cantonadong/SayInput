@@ -16,8 +16,9 @@ public sealed class JsonSettingsStoreTests
         Assert.True(settings.Enabled);
         Assert.True(settings.ShowPartial);
         Assert.True(settings.EnableAudioWarmup);
-        Assert.False(settings.StartWithWindows);
+        Assert.True(settings.StartWithWindows);
         Assert.False(settings.EnableDeviceWarmup);
+        Assert.Equal(RecordingTriggerMode.Toggle, settings.RecordingTriggerMode);
         Assert.Null(settings.MicrophoneDeviceId);
         Assert.False(File.Exists(path));
     }
@@ -47,6 +48,8 @@ public sealed class JsonSettingsStoreTests
         Assert.False(settings.ShowPartial);
         Assert.True(settings.Enabled);
         Assert.True(settings.EnableAudioWarmup);
+        Assert.True(settings.StartWithWindows);
+        Assert.Equal(RecordingTriggerMode.Toggle, settings.RecordingTriggerMode);
     }
 
     [Fact]
@@ -56,7 +59,7 @@ public sealed class JsonSettingsStoreTests
         var path = Path.Combine(temp.Path, "nested", "settings.json");
         var store = new JsonSettingsStore(path);
         await store.SaveAsync(new AppSettings(), default);
-        var desired = new AppSettings(false, true, false, "楹﹀厠椋?123", false, true);
+        var desired = new AppSettings(false, true, false, "麦克风 123", false, true, RecordingTriggerMode.Hold);
         await store.SaveAsync(desired, default);
         Assert.Equal(desired, await new JsonSettingsStore(path).LoadAsync(default));
         Assert.Single(Directory.GetFiles(Path.GetDirectoryName(path)!));

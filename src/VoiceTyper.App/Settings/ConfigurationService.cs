@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Microsoft.Win32;
 using VoiceTyper.Core.Settings;
 using VoiceTyper.Volcengine;
 using VoiceTyper.Windows.Security;
@@ -13,6 +12,7 @@ public sealed class ConfigurationService
 {
     private readonly JsonSettingsStore settings;
     private readonly DpapiCredentialStore credentials;
+    private readonly IStartupRegistration startup;
     private readonly object writes = new();
     private Task pendingWrites = Task.CompletedTask;
     private bool stopping;
@@ -24,10 +24,11 @@ public sealed class ConfigurationService
     public PortablePaths Paths { get; }
     public bool CredentialsNeedReentry { get; private set; }
 
-    public ConfigurationService(PortablePaths? paths = null)
+    public ConfigurationService(PortablePaths? paths = null, IStartupRegistration? startup = null)
     {
         paths ??= new PortablePaths();
         Paths = paths;
+        this.startup = startup ?? new WindowsStartupRegistration();
         paths.EnsureAndMigrate();
         settings = new JsonSettingsStore(paths.SettingsPath);
         credentials = new DpapiCredentialStore(paths.CredentialDirectory);
@@ -36,6 +37,7 @@ public sealed class ConfigurationService
     public async Task LoadAsync()
     {
         Preferences = await settings.LoadAsync(default);
+        startup.Apply(Preferences.StartWithWindows);
         string? secret;
         try { secret = await credentials.ReadAsync("volcengine-options-v1", default); }
         catch (CryptographicException) { CredentialsNeedReentry = true; secret = null; }
@@ -73,13 +75,7 @@ public sealed class ConfigurationService
             string.IsNullOrWhiteSpace(provider.ResourceId))
             throw new InvalidOperationException("请填写有效的凭据和 Resource ID。");
         await credentials.WriteAsync("volcengine-options-v1", JsonSerializer.Serialize(provider), default);
-        if (preferences.StartWithWindows != Preferences.StartWithWindows)
-        {
-            using var key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run");
-            if (preferences.StartWithWindows)
-                key.SetValue("VoiceTyper", $"\"{Environment.ProcessPath}\" --background");
-            else key.DeleteValue("VoiceTyper", false);
-        }
+        startup.Apply(preferences.StartWithWindows);
         await settings.SaveAsync(preferences, default);
         Provider = provider;
         Preferences = preferences;

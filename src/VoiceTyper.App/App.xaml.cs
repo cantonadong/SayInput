@@ -20,8 +20,8 @@ public partial class App : System.Windows.Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-        instance = new Mutex(true, @"Local\VoiceTyper.Desktop", out var first);
-        if (!first) { System.Windows.MessageBox.Show("VoiceTyper 已在运行，请从系统托盘打开设置。", "VoiceTyper"); Shutdown(); return; }
+        instance = new Mutex(true, @"Local\SayInput.Desktop", out var first);
+        if (!first) { System.Windows.MessageBox.Show("SayInput 已在运行，请从系统托盘打开设置。", "SayInput"); Shutdown(); return; }
         try
         {
             await configuration.LoadAsync();
@@ -38,7 +38,7 @@ public partial class App : System.Windows.Application
         }
         catch (Exception)
         {
-            System.Windows.MessageBox.Show("启动失败：无法读取配置或初始化热键。请检查本地配置和系统权限。", "VoiceTyper");
+            System.Windows.MessageBox.Show("启动失败：无法读取配置或初始化热键。请检查本地配置和系统权限。", "SayInput");
             await ExitAsync();
         }
     }

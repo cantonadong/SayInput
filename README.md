@@ -1,19 +1,19 @@
-# VoiceTyper
+# SayInput
 
-Windows 10/11 x64 全局点按录音输入工具，使用 .NET 8、C# 12 和 WPF。当前正式版本为 **1.0.0**。
+Windows 10/11 x64 全局语音输入工具，支持点按切换和按住说话两种录音方式，使用 .NET 8、C# 12 和 WPF。当前正式版本为 **1.1.0**。
 
 已支持麦克风采集、火山引擎流式识别、实时转写预览、系统托盘状态动画、提示音和 final 文本上屏。下方 Task 1–4 为早期开发记录。
 
 ## 使用方法
 
-运行 `artifacts/voice-test/VoiceTyper.App.exe`，保留整个目录；Windows x64 自带运行时包，无需另装 .NET。
+运行 `artifacts/SayInput-1.1.0-win-x64/SayInput.exe`，保留整个目录；Windows x64 自带运行时包，无需另装 .NET。
 
-1. 在设置中填入火山**语音服务**的 API Key，或 App ID + Access Token；Resource ID 必须对应账号已开通的资源。
-2. 点击“测试音量”检查麦克风，再“测试连接”，保存设置并启用。
-3. 打开记事本并点击输入位置，按一下**右 Alt**开始说话，再按一下结束，检查文字是否只输入一次。
+1. 在设置中填入火山语音服务的 API Key；Resource ID 必须对应账号已开通的资源。
+2. 点击麦克风旁的“测试”检查音量，再“测试连接”，最后点击底部“保存”。
+3. 打开记事本并点击输入位置，按所选方式使用右 Alt：按住说话并松开结束，或按一下开始、再按一下结束。
 4. 关闭设置窗口后在托盘待命；从托盘重新打开设置或退出程序。
 
-如果 SimpleWall 刚放行联网，请完全退出 VoiceTyper 后重新启动，再测试连接。语音发送到火山引擎进行识别；本地 `recordings` 目录滚动保留最近20条 WAV，不保存转写文本。凭据由当前 Windows 用户的 DPAPI 加密，并保存在 EXE 同级 `data/credentials`。
+如果 SimpleWall 刚放行联网，请完全退出 SayInput 后重新启动，再测试连接。语音发送到火山引擎进行识别；本地 `recordings` 目录滚动保留最近20条 WAV，不保存转写文本。凭据由当前 Windows 用户的 DPAPI 加密，并保存在 EXE 同级 `data/credentials`。
 
 优先反馈：能否连接、音量条是否变化、开头是否缺字、停止到上屏是否延迟、是否重复输入。详细验收与测量见 [兼容性清单](docs/compatibility.md) 和 [性能记录](docs/performance.md)。
 

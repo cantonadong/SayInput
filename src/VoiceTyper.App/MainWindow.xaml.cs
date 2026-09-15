@@ -3,11 +3,12 @@ using System.Diagnostics;
 using System.Windows;
 using VoiceTyper.App.Bootstrap;
 using VoiceTyper.App.Settings;
-using VoiceTyper.Core.Audio;
 using VoiceTyper.Core.Speech;
 using VoiceTyper.Volcengine;
-using VoiceTyper.Windows.Audio;
 using VoiceTyper.App.Branding;
+using VoiceTyper.Core.Settings;
+using VoiceTyper.Core.Audio;
+using VoiceTyper.Windows.Audio;
 
 namespace VoiceTyper.App;
 
@@ -21,29 +22,31 @@ public partial class MainWindow : Window
     private Task testTask = Task.CompletedTask;
     private Task saveTask = Task.CompletedTask;
     private bool closing;
+    private bool controlsReady;
+    private bool credentialsEditing;
     private long lastLevel;
     public MainWindow(ConfigurationService configuration, DictationRuntime runtime, Action saved, Action exit)
     {
         this.configuration = configuration; this.runtime = runtime; this.saved = saved; this.exit = exit;
-        InitializeComponent(); RefreshPreferences();
-        Icon = AppIcon.Load();
-        AppIdBox.Text = configuration.Provider.AppId; TokenBox.Password = configuration.Provider.AccessToken;
+        InitializeComponent();
+        RefreshPreferences();
+        Icon = AppIcon.Load(); BrandIcon.Source = AppIcon.LoadBrandImage();
         ApiKeyBox.Password = configuration.Provider.ApiKey; ResourceBox.Text = configuration.Provider.ResourceId;
-        Loaded += async (_, _) => await RefreshDevicesAsync();
+        SetCredentialEditing(!configuration.HasCredentials);
+        SaveButton.IsEnabled = false;
+        Loaded += async (_, _) => { await RefreshDevicesAsync(); controlsReady = true; };
         if (runtime.LastError is not null) ShowNotice(runtime.LastError, runtime.RecoveryText);
-        Metrics.Text = runtime.MetricsText;
-        runtime.MetricsUpdated += UpdateMetrics;
-        Closed += (_, _) => runtime.MetricsUpdated -= UpdateMetrics;
         StateChanged += (_, _) => { if (ShouldHideToTray(WindowState)) Hide(); };
     }
     internal static bool ShouldHideToTray(WindowState state) => state == WindowState.Minimized;
+    internal static string CredentialButtonText(bool editing) => editing ? "保存" : "编辑";
     public void RefreshPreferences()
     {
-        EnabledOption.IsChecked = configuration.Preferences.Enabled;
         StartupOption.IsChecked = configuration.Preferences.StartWithWindows;
         PartialOption.IsChecked = configuration.Preferences.ShowPartial;
+        HoldMode.IsChecked = configuration.Preferences.RecordingTriggerMode == RecordingTriggerMode.Hold;
+        ToggleMode.IsChecked = configuration.Preferences.RecordingTriggerMode == RecordingTriggerMode.Toggle;
     }
-    private void UpdateMetrics() => Dispatcher.BeginInvoke(() => Metrics.Text = runtime.MetricsText);
     public void ShowNotice(string message, string? text)
     {
         Status.Text = message;
@@ -52,7 +55,10 @@ public partial class MainWindow : Window
     }
     private VolcengineOptions ReadProvider() => new()
     {
-        AppId = AppIdBox.Text.Trim(), AccessToken = TokenBox.Password.Trim(), ApiKey = ApiKeyBox.Password.Trim(), ResourceId = ResourceBox.Text.Trim()
+        AppId = configuration.Provider.AppId,
+        AccessToken = configuration.Provider.AccessToken,
+        ApiKey = ApiKeyBox.Password.Trim(),
+        ResourceId = ResourceBox.Text.Trim()
     };
     private async void SaveClicked(object sender, RoutedEventArgs e)
     {
@@ -64,37 +70,82 @@ public partial class MainWindow : Window
     private async Task SaveAsync()
     {
         SaveButton.IsEnabled = false;
+        CredentialButton.IsEnabled = false;
+        SetPreferencesEnabled(false);
+        var succeeded = false;
         try
         {
             await runtime.SuspendAsync(true);
             var preferences = configuration.Preferences with
             {
-                Enabled = EnabledOption.IsChecked == true, StartWithWindows = StartupOption.IsChecked == true,
+                StartWithWindows = StartupOption.IsChecked == true,
                 ShowPartial = PartialOption.IsChecked == true,
+                RecordingTriggerMode = HoldMode.IsChecked == true ? RecordingTriggerMode.Hold : RecordingTriggerMode.Toggle,
                 MicrophoneDeviceId = string.IsNullOrEmpty(Devices.SelectedValue as string) ? null : Devices.SelectedValue as string
             };
             await configuration.SaveAsync(preferences, ReadProvider());
-            runtime.Apply(); saved(); Status.Text = "已保存。切换到记事本，按一下右 Alt 开始，再按一下结束。";
+            runtime.Apply(); saved(); SetCredentialEditing(false);
+            Status.Text = "已保存";
+            succeeded = true;
         }
         catch (Exception) { Status.Text = "保存失败，请检查凭据格式、配置目录和开机启动权限。"; }
-        finally { await runtime.SuspendAsync(false); SaveButton.IsEnabled = true; }
+        finally
+        {
+            await runtime.SuspendAsync(false);
+            CredentialButton.IsEnabled = true;
+            SaveButton.IsEnabled = !succeeded;
+            SetPreferencesEnabled(true);
+        }
     }
-    private async void RefreshDevicesClicked(object sender, RoutedEventArgs e) => await RefreshDevicesAsync();
+    private async void CredentialClicked(object sender, RoutedEventArgs e)
+    {
+        if (!credentialsEditing) { SetCredentialEditing(true); return; }
+        if (configuration.IsStopping || !saveTask.IsCompleted) return;
+        saveTask = SaveAsync();
+        await saveTask;
+    }
+    private void PreferenceChanged(object sender, RoutedEventArgs e)
+    {
+        if (controlsReady && testTask.IsCompleted && saveTask.IsCompleted) SaveButton.IsEnabled = true;
+    }
+    private void SetCredentialEditing(bool editing)
+    {
+        credentialsEditing = editing;
+        ProviderBox.IsEnabled = editing;
+        ApiKeyBox.IsEnabled = ResourceBox.IsEnabled = editing;
+        CredentialButton.Content = CredentialButtonText(editing);
+    }
+    private void SetPreferencesEnabled(bool enabled)
+    {
+        StartupOption.IsEnabled = PartialOption.IsEnabled = enabled;
+        HoldMode.IsEnabled = ToggleMode.IsEnabled = enabled;
+        Devices.IsEnabled = enabled;
+    }
     private async Task RefreshDevicesAsync()
     {
         try
         {
             await using var audio = new WasapiAudioCaptureService();
             var devices = await audio.GetDevicesAsync(default);
-            Devices.ItemsSource = new[] { new AudioInputDevice("", "系统默认麦克风", true) }.Concat(devices).ToArray();
+            Devices.ItemsSource = new[] { new AudioInputDevice("", "跟随系统", true) }.Concat(devices).ToArray();
             Devices.SelectedValue = configuration.Preferences.MicrophoneDeviceId ?? "";
-            if (Devices.SelectedIndex < 0) { Devices.SelectedIndex = 0; Status.Text = "已保存的麦克风不可用，请选择设备并保存。"; }
+            if (Devices.SelectedIndex < 0)
+            {
+                Devices.SelectedIndex = 0;
+                Status.Text = "已保存的麦克风不可用，当前改为跟随系统；保存后生效。";
+            }
         }
         catch (Exception) { Status.Text = "未找到可用麦克风，请检查设备和 Windows 麦克风权限。"; }
     }
     private async void LevelClicked(object sender, RoutedEventArgs e)
     {
-        if (configuration.IsStopping || !testTask.IsCompleted || !saveTask.IsCompleted) return;
+        if (!testTask.IsCompleted)
+        {
+            testCancellation?.Cancel();
+            await testTask;
+            return;
+        }
+        if (configuration.IsStopping || !saveTask.IsCompleted) return;
         var device = Devices.SelectedValue as string;
         testTask = RunTestAsync(async token =>
         {
@@ -106,10 +157,11 @@ public partial class MainWindow : Window
                 Dispatcher.BeginInvoke(() => { if (!token.IsCancellationRequested) LevelMeter.Value = level.Peak; });
             };
             await audio.StartAsync(string.IsNullOrEmpty(device) ? null : device, token);
-            Status.Text = "请说话，正在测试音量；音频不会上传。";
+            Status.Text = "正在测试麦克风音量，音频不会上传。";
             await Task.Delay(TimeSpan.FromSeconds(10), token);
-            await audio.StopAsync(default); Status.Text = "音量测试完成，麦克风已释放。";
-        });
+            await audio.StopAsync(default);
+            Status.Text = "麦克风测试完成。";
+        }, allowLevelStop: true);
         await testTask;
     }
     private async void ConnectionClicked(object sender, RoutedEventArgs e)
@@ -129,11 +181,16 @@ public partial class MainWindow : Window
         });
         await testTask;
     }
-    private async Task RunTestAsync(Func<CancellationToken, Task> run)
+    private async Task RunTestAsync(Func<CancellationToken, Task> run, bool allowLevelStop = false)
     {
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         testCancellation = cancellation;
-        ConnectionButton.IsEnabled = SaveButton.IsEnabled = LevelButton.IsEnabled = false;
+        var wasEditing = ApiKeyBox.IsEnabled;
+        var wasSaveEnabled = SaveButton.IsEnabled;
+        ConnectionButton.IsEnabled = SaveButton.IsEnabled = CredentialButton.IsEnabled = false;
+        SetPreferencesEnabled(false);
+        LevelButton.IsEnabled = allowLevelStop;
+        LevelButton.Content = allowLevelStop ? "结束" : "测试";
         try { await runtime.SuspendAsync(true); await run(cancellation.Token); }
         catch (OperationCanceledException) { Status.Text = "测试已停止或超时。"; }
         catch (Exception error) { Status.Text = ConnectionFailureMessage(error); }
@@ -141,7 +198,12 @@ public partial class MainWindow : Window
         {
             LevelMeter.Value = 0; testCancellation = null;
             await runtime.SuspendAsync(false);
-            ConnectionButton.IsEnabled = SaveButton.IsEnabled = LevelButton.IsEnabled = true;
+            ConnectionButton.IsEnabled = LevelButton.IsEnabled = true;
+            LevelButton.Content = "测试";
+            SetCredentialEditing(wasEditing);
+            CredentialButton.IsEnabled = true;
+            SaveButton.IsEnabled = wasSaveEnabled;
+            SetPreferencesEnabled(true);
         }
     }
     public async Task StopTestsAsync() { testCancellation?.Cancel(); await testTask; }
@@ -155,6 +217,7 @@ public partial class MainWindow : Window
         _ => "测试失败，请检查麦克风、网络、凭据和 Resource ID。"
     };
     private void ExitClicked(object sender, RoutedEventArgs e) => exit();
+    private void MinimizeClicked(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
     protected override async void OnClosing(CancelEventArgs e)
     {
         if (!closing && !testTask.IsCompleted)

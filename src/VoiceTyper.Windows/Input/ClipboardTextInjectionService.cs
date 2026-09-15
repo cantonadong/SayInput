@@ -58,7 +58,7 @@ public sealed class ClipboardTextInjectionService(IForegroundWindowService windo
         {
             try { completion.SetResult(operation()); }
             catch (Exception error) { completion.SetException(error); }
-        }) { IsBackground = true, Name = "VoiceTyper.Clipboard" };
+        }) { IsBackground = true, Name = "SayInput.Clipboard" };
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
         return completion.Task;

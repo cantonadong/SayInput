@@ -7,6 +7,7 @@ using VoiceTyper.Windows.Audio;
 using VoiceTyper.Windows.Input;
 using VoiceTyper.Windows.Keyboard;
 using VoiceTyper.App.Sound;
+using VoiceTyper.Core.Settings;
 
 namespace VoiceTyper.App.Bootstrap;
 
@@ -39,12 +40,8 @@ public sealed class DictationRuntime : IAsyncDisposable
             new WindowsTextInjectionService(windows), new PerformanceMetrics());
         toggle = new(() => Coordinator.State, StartSession, Coordinator.Release,
             new SystemOutputMuteService(), sounds, Coordinator.CancelAsync);
-        hotkey.Pressed += (_, _) =>
-        {
-            if (!enabled || suspensions > 0) return;
-            if (!configuration.HasCredentials) { sounds.Play(SoundCue.Error); Notice?.Invoke("请先在设置中保存火山引擎凭据。", null); return; }
-            toggleTask = toggle.ToggleAsync();
-        };
+        hotkey.Pressed += (_, _) => HandleTrigger(RecordingTriggerEdge.Pressed);
+        hotkey.Released += (_, _) => HandleTrigger(RecordingTriggerEdge.Released);
         hotkey.Cancelled += (_, _) =>
         {
             if (!enabled || suspensions > 0) return;
@@ -64,6 +61,22 @@ public sealed class DictationRuntime : IAsyncDisposable
             if (error is not null) { LastError = error; RecoveryText = text; Notice?.Invoke(error, text); }
             else { LastError = null; RecoveryText = null; }
         };
+    }
+
+    private void HandleTrigger(RecordingTriggerEdge edge)
+    {
+        if (!enabled || suspensions > 0 ||
+            !RecordingTriggerPolicy.ShouldToggle(configuration.Preferences.RecordingTriggerMode, edge)) return;
+        if (!configuration.HasCredentials)
+        {
+            if (edge == RecordingTriggerEdge.Pressed)
+            {
+                sounds.Play(SoundCue.Error);
+                Notice?.Invoke("请先在设置中保存火山引擎凭据。", null);
+            }
+            return;
+        }
+        toggleTask = toggle.ToggleAsync();
     }
 
     private bool StartSession()

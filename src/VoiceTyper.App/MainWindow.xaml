@@ -1,23 +1,81 @@
-<Window x:Class="VoiceTyper.App.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="VoiceTyper · 设置" Width="600" Height="760" MinHeight="600" WindowStartupLocation="CenterScreen">
- <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="28">
-  <TextBlock FontSize="24" FontWeight="SemiBold" Text="点按右 Alt，开始或结束语音输入" />
-  <TextBlock Margin="0,10,0,18" TextWrapping="Wrap" Text="保存凭据后，点击其他应用的输入位置：按一下右 Alt 开始录音，再按一下结束并输入文字。最小化或关闭此窗口后仍在系统托盘运行。" />
-  <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-   <CheckBox x:Name="EnabledOption" Content="启用" Margin="0,0,20,0" /><CheckBox x:Name="StartupOption" Content="开机启动" Margin="0,0,20,0" /><CheckBox x:Name="PartialOption" Content="显示实时文字" />
+<Window x:Class="VoiceTyper.App.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="SayInput · 设置" Width="430" Height="700" MinWidth="410" MinHeight="640" ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen">
+ <Window.Resources>
+  <Style TargetType="TextBlock"><Setter Property="VerticalAlignment" Value="Center" /></Style>
+  <Style TargetType="Button"><Setter Property="MinHeight" Value="32" /><Setter Property="Padding" Value="15,5" /></Style>
+ </Window.Resources>
+ <Grid Margin="24,18,24,20">
+  <Grid.RowDefinitions>
+   <RowDefinition Height="Auto" /><RowDefinition Height="18" />
+   <RowDefinition Height="Auto" /><RowDefinition Height="18" />
+   <RowDefinition Height="Auto" /><RowDefinition Height="18" />
+   <RowDefinition Height="Auto" /><RowDefinition Height="8" />
+   <RowDefinition Height="Auto" /><RowDefinition Height="18" />
+   <RowDefinition Height="*" /><RowDefinition Height="20" />
+   <RowDefinition Height="Auto" />
+  </Grid.RowDefinitions>
+  <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center">
+   <Image x:Name="BrandIcon" Width="42" Height="42" Stretch="Uniform" Margin="0,0,12,0" />
+   <TextBlock Text="SayInput 设置" FontWeight="SemiBold" FontSize="16" />
   </StackPanel>
-  <TextBlock Text="麦克风" FontWeight="SemiBold" /><ComboBox x:Name="Devices" DisplayMemberPath="Name" SelectedValuePath="Id" Margin="0,8,0,8" />
-  <StackPanel Orientation="Horizontal"><Button Content="刷新设备" Click="RefreshDevicesClicked" Padding="12,5" /><Button x:Name="LevelButton" Content="测试音量（10 秒）" Click="LevelClicked" Margin="10,0,0,0" Padding="12,5" /></StackPanel>
-  <ProgressBar x:Name="LevelMeter" Height="8" Maximum="1" Margin="0,10,0,20" />
-  <TextBlock Text="火山引擎" FontSize="17" FontWeight="SemiBold" />
-  <TextBlock Text="App ID（使用 Access Token 时填写）" Margin="0,10,0,4" /><TextBox x:Name="AppIdBox" Padding="6" />
-  <TextBlock Text="Access Token" Margin="0,8,0,4" /><PasswordBox x:Name="TokenBox" Padding="6" />
-  <TextBlock Text="或 API Key（填写后优先使用）" Margin="0,8,0,4" /><PasswordBox x:Name="ApiKeyBox" Padding="6" />
-  <TextBlock Text="Resource ID" Margin="0,8,0,4" /><TextBox x:Name="ResourceBox" Padding="6" />
-  <TextBlock Margin="0,10,0,12" TextWrapping="Wrap" Foreground="#666666" Text="语音会发送到火山引擎进行云识别；本机不保存音频或转写历史。凭据使用当前 Windows 用户加密保护。连接测试不采集麦克风。" />
-  <StackPanel Orientation="Horizontal"><Button x:Name="SaveButton" Content="保存设置" Click="SaveClicked" Padding="18,8" /><Button x:Name="ConnectionButton" Content="测试连接" Click="ConnectionClicked" Margin="10,0,0,0" Padding="18,8" /></StackPanel>
-  <TextBlock x:Name="Status" Margin="0,14,0,8" TextWrapping="Wrap" Text="请填写凭据并保存，然后到记事本试用。" />
-  <TextBox x:Name="RecoveryText" Visibility="Collapsed" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="100" VerticalScrollBarVisibility="Auto" />
-  <TextBlock x:Name="Metrics" TextWrapping="Wrap" FontSize="11" Foreground="#666666" Margin="0,10,0,0" />
-  <Button Content="退出程序" Click="ExitClicked" HorizontalAlignment="Right" Padding="14,6" Margin="0,12,0,0" />
- </StackPanel></ScrollViewer>
+
+  <Grid Grid.Row="2">
+   <Grid.ColumnDefinitions><ColumnDefinition Width="64" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+   <TextBlock Text="设置项" FontWeight="SemiBold" />
+   <StackPanel Grid.Column="1" Orientation="Horizontal">
+    <CheckBox x:Name="StartupOption" Content="开机启动" VerticalAlignment="Center" Margin="0,0,26,0" Checked="PreferenceChanged" Unchecked="PreferenceChanged" />
+    <CheckBox x:Name="PartialOption" Content="显示实时文字" VerticalAlignment="Center" Checked="PreferenceChanged" Unchecked="PreferenceChanged" />
+   </StackPanel>
+  </Grid>
+
+  <Grid Grid.Row="4">
+   <Grid.ColumnDefinitions><ColumnDefinition Width="64" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+   <TextBlock Text="使用方式" FontWeight="SemiBold" />
+   <StackPanel Grid.Column="1" Orientation="Horizontal">
+    <RadioButton x:Name="HoldMode" GroupName="TriggerMode" Content="按住" VerticalAlignment="Center" Margin="0,0,46,0" Checked="PreferenceChanged" />
+    <RadioButton x:Name="ToggleMode" GroupName="TriggerMode" Content="点击" VerticalAlignment="Center" Checked="PreferenceChanged" />
+   </StackPanel>
+  </Grid>
+
+  <Grid Grid.Row="6">
+   <Grid.ColumnDefinitions><ColumnDefinition Width="64" /><ColumnDefinition Width="*" /><ColumnDefinition Width="96" /></Grid.ColumnDefinitions>
+   <TextBlock Text="麦克风" FontWeight="SemiBold" />
+   <ComboBox x:Name="Devices" Grid.Column="1" DisplayMemberPath="Name" SelectedValuePath="Id" Height="32" VerticalContentAlignment="Center" Margin="0,0,8,0" SelectionChanged="PreferenceChanged" />
+   <Button x:Name="LevelButton" Grid.Column="2" Content="测试" Click="LevelClicked" />
+  </Grid>
+  <ProgressBar x:Name="LevelMeter" Grid.Row="8" Height="14" Maximum="1" Margin="64,0,0,0" Foreground="#20D83B" />
+
+  <TabControl x:Name="SettingsTabs" Grid.Row="10" SelectedIndex="1">
+   <TabItem Header="文字润色" IsEnabled="False" />
+   <TabItem Header="语音识别">
+    <Grid Margin="14,12,14,14">
+     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" /><RowDefinition Height="6" /><RowDefinition Height="32" /><RowDefinition Height="14" />
+      <RowDefinition Height="Auto" /><RowDefinition Height="6" /><RowDefinition Height="32" /><RowDefinition Height="14" />
+      <RowDefinition Height="Auto" /><RowDefinition Height="6" /><RowDefinition Height="32" /><RowDefinition Height="14" />
+      <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" />
+     </Grid.RowDefinitions>
+     <TextBlock Grid.Row="0" Text="服务商" FontWeight="SemiBold" />
+     <ComboBox x:Name="ProviderBox" Grid.Row="2" SelectedIndex="0" VerticalContentAlignment="Center">
+      <ComboBoxItem Content="火山引擎" />
+     </ComboBox>
+     <TextBlock Grid.Row="4" Text="API Key" />
+     <PasswordBox x:Name="ApiKeyBox" Grid.Row="6" Padding="7,5" />
+     <TextBlock Grid.Row="8" Text="Resource ID" />
+     <TextBox x:Name="ResourceBox" Grid.Row="10" Padding="7,5" />
+     <StackPanel Grid.Row="12" Orientation="Horizontal" HorizontalAlignment="Center">
+      <Button x:Name="CredentialButton" Content="编辑" Click="CredentialClicked" MinWidth="82" />
+      <Button x:Name="ConnectionButton" Content="测试连接" Click="ConnectionClicked" MinWidth="92" Margin="8,0,0,0" />
+     </StackPanel>
+     <TextBlock x:Name="Status" Grid.Row="13" Margin="0,10,0,0" TextWrapping="Wrap" FontSize="12" Text="请填写凭据并保存，然后到其他应用试用。" />
+     <TextBox x:Name="RecoveryText" Grid.Row="14" Visibility="Collapsed" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="55" VerticalScrollBarVisibility="Auto" />
+    </Grid>
+   </TabItem>
+  </TabControl>
+
+  <StackPanel Grid.Row="12" Orientation="Horizontal" HorizontalAlignment="Center">
+   <Button x:Name="SaveButton" Content="保存" Click="SaveClicked" MinWidth="92" />
+   <Button Content="最小化" Click="MinimizeClicked" MinWidth="92" Margin="10,0,0,0" />
+   <Button Content="退出" Click="ExitClicked" MinWidth="92" Margin="10,0,0,0" />
+  </StackPanel>
+ </Grid>
 </Window>

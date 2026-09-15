@@ -14,6 +14,12 @@ public sealed class WindowLifecycleTests
     [Fact]
     public void Minimized_settings_are_hidden_to_tray() => Assert.True(MainWindow.ShouldHideToTray(WindowState.Minimized));
 
+    [Theory]
+    [InlineData(false, "编辑")]
+    [InlineData(true, "保存")]
+    public void Credential_button_text_follows_edit_state(bool editing, string expected) =>
+        Assert.Equal(expected, MainWindow.CredentialButtonText(editing));
+
     [Fact]
     public void Overlay_is_not_constructed_until_first_show()
     {

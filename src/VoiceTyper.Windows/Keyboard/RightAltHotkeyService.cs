@@ -39,7 +39,7 @@ public sealed class RightAltHotkeyService : IHotkeyService
             loopError = null;
             keys.Reset();
             var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            worker = new Thread(() => Run(ready)) { IsBackground = true, Name = "VoiceTyper.KeyboardHook" };
+            worker = new Thread(() => Run(ready)) { IsBackground = true, Name = "SayInput.KeyboardHook" };
             worker.Start();
             try { ready.Task.GetAwaiter().GetResult(); }
             catch

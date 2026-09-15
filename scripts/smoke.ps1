@@ -1,4 +1,4 @@
-param([string]$Exe = 'artifacts/voice-test/VoiceTyper.App.exe', [int]$IdleSeconds = 300)
+param([string]$Exe = 'artifacts/SayInput-1.1.0-win-x64/SayInput.exe', [int]$IdleSeconds = 300)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
@@ -29,7 +29,7 @@ try {
     }
     $cpu = 100 * ($process.TotalProcessorTime.TotalSeconds - $cpuStart) / $watch.Elapsed.TotalSeconds / [Environment]::ProcessorCount
     Write-Output "Idle average total-machine CPU: $([Math]::Round($cpu,4))%"
-    $exitLabel = -join ([char[]]@(0x9000,0x51FA,0x7A0B,0x5E8F))
+    $exitLabel = -join ([char[]]@(0x9000,0x51FA))
     $exitCondition = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, $exitLabel)
     $exitButton = $window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $exitCondition)
     if (!$exitButton) { throw 'Exit button not found.' }
