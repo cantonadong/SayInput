@@ -353,3 +353,11 @@
 - Release 非硬件测试 134/134 通过。`scripts/publish.ps1` 生成自包含 Windows x64 发行目录；ZIP 含 477 个文件、71,449,764 字节，SHA-256 为 `f559138e3c2bfcae8aed40528a795e5f5a2f86b2af96bca43c6f68e53487f961`，EXE FileVersion 为 1.2.0.0。ZIP 与目录均无 `data`、`recordings` 或 `key.txt`；发行 DLL 与本轮构建产物哈希一致。
 - GitHub CLI 原存储令牌返回 HTTP 401；已完成网页认证，并通过 `gh auth setup-git` 保存 Git 凭据，`gh auth status` 确认 keyring 中账号 `cantonadong` 已恢复有效。
 - 发布后仍需用户真实录音验收最新三行自动滚动；软件发布无法替代该人工检查。
+
+## 2026-09-20：v1.2.0 正式发布结果
+
+- 有意修改的九个源码、测试、脚本和文档文件已直接提交并推送到 `main`，发行提交为 `13ea74d229a78307e47c6612c3f7297359d4508b`；未暂存仓库历史遗留的生成产物和旧发行目录变动。
+- GitHub Release：<https://github.com/cantonadong/SayInput/releases/tag/v1.2.0>，公开、非草稿、非预发布。远端 `main` 和 `v1.2.0` 标签均指向发行提交。
+- Release ZIP 附件大小为 71,449,764 字节，远端摘要 `sha256:f559138e3c2bfcae8aed40528a795e5f5a2f86b2af96bca43c6f68e53487f961`，与本地一致；同时上传 `SHA256SUMS-1.2.0.txt`。
+- 在受限执行上下文中 `gh` 无法读取 Windows keyring 并返回 HTTP 401；在正常 Windows 用户上下文执行认证及 Release 命令成功。后续涉及 GitHub API 的写入操作应使用该用户上下文。
+- 下一步：用户安装并实测长段实时转写，确认悬浮窗始终显示最新三行。
