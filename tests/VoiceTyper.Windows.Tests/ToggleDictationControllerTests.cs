@@ -9,7 +9,7 @@ namespace VoiceTyper.Windows.Tests;
 public sealed class ToggleDictationControllerTests
 {
     [Fact]
-    public async Task Clicks_order_start_sound_mute_start_then_release_restore_stop_sound()
+    public async Task Clicks_start_capture_before_start_sound_then_release_restore_stop_sound()
     {
         var log = new List<string>();
         var state = DictationState.Idle;
@@ -19,7 +19,7 @@ public sealed class ToggleDictationControllerTests
         await controller.ToggleAsync();
         await controller.ToggleAsync();
 
-        Assert.Equal(["sound:Start", "mute", "start", "release", "restore", "sound:Stop"], log);
+        Assert.Equal(["start", "sound:Start", "mute", "release", "restore", "sound:Stop"], log);
     }
 
     [Fact]

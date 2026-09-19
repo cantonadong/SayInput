@@ -22,9 +22,11 @@ public sealed class ToggleDictationController(
             switch (state())
             {
                 case DictationState.Idle:
-                    await sounds.PlayAsync(SoundCue.Start).ConfigureAwait(false);
-                    await mute.MuteAsync(default).ConfigureAwait(false);
-                    if (!start()) await mute.RestoreAsync().ConfigureAwait(false);
+                    if (start())
+                    {
+                        await sounds.PlayAsync(SoundCue.Start).ConfigureAwait(false);
+                        await mute.MuteAsync(default).ConfigureAwait(false);
+                    }
                     break;
                 case DictationState.Starting:
                 case DictationState.Recording:

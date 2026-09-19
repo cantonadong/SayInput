@@ -43,6 +43,7 @@ public partial class RecordingOverlay : Window, IRecordingOverlay
             lock (gate) if (session != sessionId) return;
             Left = SystemParameters.WorkArea.Left + (SystemParameters.WorkArea.Width - Width) / 2;
             Transcript.Text = "请说话…";
+            TranscriptScroll.ScrollToTop();
             Wave.Reset();
             Show();
             UpdateLayout();
@@ -53,7 +54,17 @@ public partial class RecordingOverlay : Window, IRecordingOverlay
     public void UpdatePartial(Guid id, string text)
     {
         lock (gate) { if (session != id) return; partial = text; }
-        Dispatcher.BeginInvoke(() => { if (!callbackLifetime.IsOpen) return; lock (gate) if (session == id && ShowPartial) Transcript.Text = partial; });
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (!callbackLifetime.IsOpen) return;
+            lock (gate)
+            {
+                if (session != id || !ShowPartial) return;
+                Transcript.Text = partial;
+            }
+            TranscriptScroll.UpdateLayout();
+            TranscriptScroll.ScrollToBottom();
+        });
     }
     public void UpdateLevel(Guid id, AudioLevel value) { lock (gate) if (session == id) level = value.Peak; }
     public void Finalizing(Guid id) => Dispatcher.BeginInvoke(() =>
@@ -67,6 +78,8 @@ public partial class RecordingOverlay : Window, IRecordingOverlay
         lock (gate) if (session != id) return;
         StopRendering();
         Transcript.Text = message;
+        TranscriptScroll.UpdateLayout();
+        TranscriptScroll.ScrollToBottom();
         Show();
         await Task.Delay(4000);
         Hide(id);

@@ -30,14 +30,14 @@ SayInput 将麦克风语音实时发送到火山引擎“流式识别 2.0”，�
 
 ## 下载
 
-当前正式版本为 **v1.1.0**。
+当前正式版本为 **v1.2.0**。
 
-从 [GitHub Releases](https://github.com/cantonadong/SayInput/releases/latest) 下载 `SayInput-1.1.0-win-x64.zip`，解压完整目录后运行 `SayInput.exe`。请勿只复制 EXE，运行所需文件都在发行目录内。
+从 [GitHub Releases](https://github.com/cantonadong/SayInput/releases/latest) 下载 `SayInput-1.2.0-win-x64.zip`，解压完整目录后运行 `SayInput.exe`。请勿只复制 EXE，运行所需文件都在发行目录内。
 
 SHA-256：
 
 ```text
-307ede90c518b55fcbe3b06ec6205eff5af1ffe14b7bfa276eccbaa56a061b45
+f559138e3c2bfcae8aed40528a795e5f5a2f86b2af96bca43c6f68e53487f961
 ```
 
 支持 Windows 10/11 x64。
@@ -125,7 +125,7 @@ dotnet test VoiceTyper.sln -c Release --filter "Category!=Hardware"
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish.ps1
 ```
 
-默认输出到 `artifacts/SayInput-1.1.0-win-x64`。项目内部仍保留 `VoiceTyper.*` 工程与命名空间，用户可见产品名和进程名均为 SayInput。
+默认输出到 `artifacts/SayInput-1.2.0-win-x64`。项目内部仍保留 `VoiceTyper.*` 工程与命名空间，用户可见产品名和进程名均为 SayInput。
 
 ## 项目结构
 

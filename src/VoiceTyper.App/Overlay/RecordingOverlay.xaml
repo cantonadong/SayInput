@@ -8,9 +8,11 @@
     <Border Background="#F21B2433" CornerRadius="18" Padding="22,16" BorderBrush="#40546A" BorderThickness="1">
         <StackPanel>
             <local:Waveform x:Name="Wave" Width="132" Height="28" HorizontalAlignment="Center" />
-            <TextBlock x:Name="Transcript" Foreground="White" FontSize="17" Margin="0,12,0,0"
-                       TextWrapping="Wrap" MinHeight="24" MaxHeight="72" LineHeight="24"
-                       LineStackingStrategy="BlockLineHeight" TextTrimming="CharacterEllipsis" Text="请说话…" />
+            <ScrollViewer x:Name="TranscriptScroll" Margin="0,12,0,0" MinHeight="24" MaxHeight="72"
+                          VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
+                <TextBlock x:Name="Transcript" Foreground="White" FontSize="17" TextWrapping="Wrap"
+                           LineHeight="24" LineStackingStrategy="BlockLineHeight" Text="请说话…" />
+            </ScrollViewer>
         </StackPanel>
     </Border>
 </Window>

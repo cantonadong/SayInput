@@ -1,6 +1,13 @@
 # VoiceTyper 开发进展
 
-最后更新：2026-09-15（Pacific/Auckland）
+## 2026-09-16：清理构建产物并确认最终可用程序
+
+- 清理了 `src` 与 `tests` 下 14 个可重新生成的 `bin/obj` 目录，共约 198.89 MB；同时删除了已被正式发布包取代的 `artifacts/hotkey-test`、`artifacts/window-test` 和 `artifacts/voice-test`。保留源码、便携数据、录音、根目录凭据文件及最终发布包。
+- 最终实际可用程序确认为 `artifacts/SayInput-1.1.0-win-x64/SayInput.exe`。文件版本为 `1.1.0.0`，SHA-256 为 `AFC36E792BA9544126424DA736CA249C56DBFE4B5C2307E23082E47FA60059FB`，与清理前最新 Release 构建完全一致。
+- 运行 `scripts/smoke.ps1 -Exe artifacts/SayInput-1.1.0-win-x64/SayInput.exe -IdleSeconds 20`：设置窗口成功创建，20 秒空闲期间 working set 约 283.24–283.29 MB、private memory 约 213.64–213.73 MB、平均整机 CPU 0%，UI 正常退出且退出码为 0。
+- 注意：仓库历史跟踪了大量 `bin/obj` 文件，本次清理会在 Git 状态中显示相应删除；不要把这些删除误认为源码丢失。后续构建会重新生成这些目录。
+
+最后更新：2026-09-16（Pacific/Auckland）
 
 ## 继续开发前必读
 
@@ -326,3 +333,23 @@
 - 删除已经失效的测试版入口、未实现声明和阶段性验证记录；详细开发历史继续保留在本开发进展文档中。
 - README 中固定版本号、发行包名称和 SHA-256 均与 GitHub v1.1.0 Release 一致，没有写入真实凭据。
 - 可复用经验：README 应描述当前可用产品状态；阶段任务、排错过程和内部验收记录应留在开发进展文档，避免首页随开发历史增长而失去重点。
+
+# 2026-09-20：实时转写悬浮窗保持最新三行可见
+
+- 悬浮窗将原先超过三行就显示省略号的转写文本改为三行高的滚动区域。每次收到实时转写更新后刷新布局并滚到末尾，新会话开始时重置到顶部；错误消息也滚到末尾。
+- 验证：`dotnet test VoiceTyper.sln -c Release --no-restore --filter 'Category!=Hardware'` 通过，134/134（Core 20、Volcengine 28、Windows 86）；悬浮窗 XAML 随应用项目编译成功。
+- 仍需在真实录音中人工确认：连续说话超过三行时末行持续显示最新内容，窗口高度不超过三行文本；本轮没有改动或部署已发布的便携程序。
+- 下一步：用新构建的程序进行真实语音悬浮窗验收，再决定是否更新便携测试版。
+
+## 2026-09-20：实时转写测试包
+
+- 用户要求打包以便自行测试。重新运行 Release 非硬件测试，134/134 通过；随后运行 `scripts/publish.ps1 -Output artifacts/SayInput-1.1.0-live-transcript-win-x64`，生成独立的自包含 Windows x64 目录，保留已有正式发行目录。
+- 打包为 `artifacts/SayInput-1.1.0-live-transcript-win-x64.zip`，共 477 个文件、71,465,019 字节，SHA-256：`3CEAD4CC9C0DEFADB58E38E9FA9A885E9C79AEEF07B5691504CF09538B26A7F1`。EXE 文件版本为 1.1.0.0；目录及 ZIP 均已扫描，未包含 `data`、`recordings`、`key.txt`。
+- 包尚待用户在真实录音环境验证：连续说话超过三行时，悬浮窗底部始终显示最新转写。
+
+## 2026-09-20：v1.2.0 发布准备
+
+- 按用户要求将产品版本从 1.1.0 提升到 1.2.0，并更新发布、冒烟脚本默认路径与 README 下载和校验信息。纳入本轮尚未提交的录音触发控制器调整：先成功启动采集，再播放开始提示音与静音；对应测试已更新。
+- Release 非硬件测试 134/134 通过。`scripts/publish.ps1` 生成自包含 Windows x64 发行目录；ZIP 含 477 个文件、71,449,764 字节，SHA-256 为 `f559138e3c2bfcae8aed40528a795e5f5a2f86b2af96bca43c6f68e53487f961`，EXE FileVersion 为 1.2.0.0。ZIP 与目录均无 `data`、`recordings` 或 `key.txt`；发行 DLL 与本轮构建产物哈希一致。
+- GitHub CLI 原存储令牌返回 HTTP 401；已完成网页认证，并通过 `gh auth setup-git` 保存 Git 凭据，`gh auth status` 确认 keyring 中账号 `cantonadong` 已恢复有效。
+- 发布后仍需用户真实录音验收最新三行自动滚动；软件发布无法替代该人工检查。
