@@ -10,12 +10,15 @@ public sealed class TrayIconService : IDisposable
     private readonly Forms.ToolStripMenuItem enabled;
     private readonly Forms.ContextMenuStrip menu;
     private readonly TrayStatusAnimation animation;
-    public TrayIconService(Action showSettings, Action toggleEnabled, Action exit)
+    public TrayIconService(Action showSettings, Action toggleEnabled, Action exit, Action copyLastText, Func<bool> canCopyLastText)
     {
         menu = new();
         enabled = new("启用右 Alt 录音", null, (_, _) => toggleEnabled());
         menu.Items.Add(enabled);
         menu.Items.Add("设置", null, (_, _) => showSettings());
+        var copy = new Forms.ToolStripMenuItem("复制最后文本", null, (_, _) => copyLastText()) { Enabled = false };
+        menu.Items.Add(copy);
+        menu.Opening += (_, _) => copy.Enabled = canCopyLastText();
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("退出", null, (_, _) => exit());
         appIcon = new System.Drawing.Icon(Path.Combine(AppContext.BaseDirectory, "resources", "icon.ico"));

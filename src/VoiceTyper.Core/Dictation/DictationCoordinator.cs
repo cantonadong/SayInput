@@ -16,7 +16,9 @@ public sealed class DictationCoordinator(Func<IAudioCaptureService> createAudio,
     private Guid active;
     private bool disposed;
     private volatile DictationState state;
+    private string? lastText;
     public DictationState State => state;
+    public string? LastText { get { lock (gate) return lastText; } }
     public string? MicrophoneDeviceId { get; set; }
     public Task Completion { get { lock (gate) return completion; } }
     public event Action<Guid, DictationState>? StateChanged;
@@ -90,6 +92,7 @@ public sealed class DictationCoordinator(Func<IAudioCaptureService> createAudio,
             else
             {
                 ct.ThrowIfCancellationRequested();
+                lock (gate) lastText = final;
                 if (!windows.IsValid(target)) throw new InvalidOperationException("原输入窗口已关闭，请从设置窗口复制本次文字。");
                 SetState(id, DictationState.Injecting);
                 metrics.Mark(id, PerformanceEvent.InjectionStarted);

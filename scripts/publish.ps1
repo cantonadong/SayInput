@@ -1,4 +1,4 @@
-param([string]$SdkPath = 'D:/Program/dotnet', [string]$Output = 'artifacts/SayInput-1.2.0-win-x64')
+param([string]$SdkPath = 'D:/Program/dotnet', [string]$Output = 'artifacts/SayInput-1.3.0-win-x64')
 $ErrorActionPreference = 'Stop'
 $env:DOTNET_ROOT = $SdkPath
 $env:DOTNET_CLI_HOME = Join-Path $env:TEMP 'sayinput-cli'

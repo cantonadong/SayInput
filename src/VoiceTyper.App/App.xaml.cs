@@ -3,6 +3,7 @@ using VoiceTyper.App.Bootstrap;
 using VoiceTyper.App.Settings;
 using VoiceTyper.App.Tray;
 using VoiceTyper.Windows.Audio;
+using VoiceTyper.Windows.Input;
 
 namespace VoiceTyper.App;
 
@@ -26,7 +27,8 @@ public partial class App : System.Windows.Application
         {
             await configuration.LoadAsync();
             runtime = new(configuration);
-            tray = new(ShowSettings, () => { if (toggleTask.IsCompleted && !exiting) toggleTask = ToggleAsync(); }, () => _ = ExitAsync());
+            tray = new(ShowSettings, () => { if (toggleTask.IsCompleted && !exiting) toggleTask = ToggleAsync(); }, () => _ = ExitAsync(),
+                () => _ = CopyLastTextAsync(), () => !exiting && !string.IsNullOrWhiteSpace(runtime?.Coordinator.LastText));
             runtime.Notice += (message, text) => Dispatcher.BeginInvoke(() => { tray?.Notify(message); settingsWindow?.ShowNotice(message, text); });
             runtime.Coordinator.StateChanged += (_, state) => Dispatcher.BeginInvoke(() => tray?.SetActivity(TrayActivityMapper.From(state)));
             runtime.Apply();
@@ -57,6 +59,14 @@ public partial class App : System.Windows.Application
             settingsWindow.Closed += (_, _) => settingsWindow = null;
         }
         settingsWindow.Show(); settingsWindow.WindowState = WindowState.Normal; settingsWindow.Activate();
+    }
+    private async Task CopyLastTextAsync()
+    {
+        if (exiting) return;
+        var text = runtime?.Coordinator.LastText;
+        if (string.IsNullOrWhiteSpace(text)) return;
+        try { await ClipboardTextInjectionService.CopyAsync(text); }
+        catch (Exception) { tray?.Notify("复制失败，剪贴板可能被其他程序占用，请重试。"); }
     }
     private async Task ToggleAsync()
     {

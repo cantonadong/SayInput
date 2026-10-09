@@ -361,3 +361,30 @@
 - Release ZIP 附件大小为 71,449,764 字节，远端摘要 `sha256:f559138e3c2bfcae8aed40528a795e5f5a2f86b2af96bca43c6f68e53487f961`，与本地一致；同时上传 `SHA256SUMS-1.2.0.txt`。
 - 在受限执行上下文中 `gh` 无法读取 Windows keyring 并返回 HTTP 401；在正常 Windows 用户上下文执行认证及 Release 命令成功。后续涉及 GitHub API 的写入操作应使用该用户上下文。
 - 下一步：用户安装并实测长段实时转写，确认悬浮窗始终显示最新三行。
+
+## 2026-10-06：替换应用与托盘状态图标
+
+- 使用用户更新的 `icon/icon.png`（200×200）作为主图，并运行 `scripts/generate-icon.ps1` 重新生成多尺寸 `icon/icon.ico`，供 EXE、窗口和待机托盘使用。
+- 新的 `icon/rec.png` 与 `icon/process.png` 均为 100×100 单张图片。托盘加载器对正方形图片按单帧完整加载，单帧不启动动画计时器；原有横向八帧素材的加载方式保留。
+- 完全终止旧 SayInput 进程后，将自包含 Release 构建覆盖至原目录 `artifacts/SayInput-1.2.0-win-x64/SayInput.exe`，未创建额外测试 EXE，也未删除已有便携数据。
+- 验证：`scripts/generate-icon.ps1` 成功；正常 Windows 用户环境下 `dotnet publish src/VoiceTyper.App/VoiceTyper.App.csproj -c Release -r win-x64 --self-contained true -o artifacts/SayInput-1.2.0-win-x64 -p:DebugType=None -p:DebugSymbols=false` 成功。发布目录中四个图标文件 SHA-256 均与源文件一致；修改的 C# 文件 `git diff --check` 通过。
+- 环境问题：受限环境无法终止正常用户进程，且 `--no-restore` 构建缺少运行时包；改用获批的正常用户执行并还原依赖后构建成功。
+- 按用户偏好未运行自动测试或启动应用验收。下一步：用户运行上述 EXE，确认主图标、录音托盘图标、处理托盘图标及完成后的待机恢复。
+
+## 2026-10-06：托盘复制最后文本
+
+- 托盘右键菜单新增“复制最后文本”，打开菜单时根据是否有文本启用或置灰。点击后复用现有 STA 剪贴板复制与有限重试，失败时显示可重试的托盘通知。
+- 协调器在获得非空完整终稿、确认未取消后，将最近文本保存在受锁保护的内存字段；自动输入失败仍可复制。空录音、取消或未获得终稿的识别失败保留上一份文本，退出后不持久化。
+- 已终止旧 SayInput 进程，并使用 `D:/Program/dotnet/dotnet.exe publish src/VoiceTyper.App/VoiceTyper.App.csproj -c Release -r win-x64 --self-contained true -o artifacts/SayInput-1.2.0-win-x64 -p:DebugType=None -p:DebugSymbols=false` 覆盖原目录，构建退出码 0。App/Core 发布 DLL 与构建 DLL 的 SHA-256 一致；三份修改源码的 `git diff --check` 通过。
+- 环境问题：PATH 中的 dotnet 只有运行时，SDK 位于项目脚本指定的 `D:/Program/dotnet`；受限环境 NuGet 还原出现 NU1301，切换获批正常用户环境后还原和发布成功。
+- 按用户规则未运行测试或启动应用验收；保留现有便携数据与其他工作区改动。下一步：用户启动原 EXE，确认初始菜单置灰，完成识别后能复制完整文本，后续识别更新文本，空录音或取消保留上一份，重启后重新置灰。
+
+## 2026-10-09：v1.3.0 发布
+
+- 按用户要求将版本从 1.2.0 提升为 1.3.0，更新项目版本、发布/冒烟脚本默认路径及 README 下载和校验信息；包含此前未提交的主图标、静态托盘状态图标与“复制最后文本”功能。
+- 构建：正常 Windows 用户环境执行 D:/Program/dotnet/dotnet.exe publish src/VoiceTyper.App/VoiceTyper.App.csproj -c Release -r win-x64 --self-contained true -o artifacts/SayInput-1.3.0-win-x64 -p:DebugType=None -p:DebugSymbols=false，退出码 0；EXE FileVersion=1.3.0.0、ProductVersion=1.3.0。
+- 初次 scripts/publish.ps1 因临时 NuGet 缓存中 NAudio.Wasapi 缺失 nuspec（NU5037）失败；改用正常用户默认依赖缓存后成功，未删除旧缓存或现有产物。
+- ZIP 包含 477 个文件、70734027 字节，SHA-256 为 f039a9b0b0cd544abe8213c8ea6638c3cc410b457866ff703276bc2d3beee3f7；目录与 ZIP 扫描均未发现 data、recordings 或 key.txt。校验文件为 artifacts/SHA256SUMS-1.3.0.txt。
+- 复用正常 Windows 用户 keyring 中现有有效 GitHub 凭据；受限执行环境返回 401，未重新登录。仅逐项暂存源码、图标、脚本和文档；保留旧产物、bin/obj 和快捷方式的本地状态。
+- 按用户规则未运行测试或启动应用验收。下一步：用户实测图标状态切换、复制最后文本及长段实时转写。
+- 正式 Release 地址：https://github.com/cantonadong/SayInput/releases/tag/v1.3.0 。

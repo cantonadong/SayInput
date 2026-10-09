@@ -73,7 +73,7 @@ internal sealed class TrayStatusAnimation : IDisposable
         if (frames.Count == 0) { display(idle); return; }
         display(frames[0]);
         frame = 1;
-        timer.Start();
+        if (frames.Count > 1) timer.Start();
     }
 
     private IReadOnlyList<System.Drawing.Icon> Load(string fileName)
@@ -83,7 +83,8 @@ internal sealed class TrayStatusAnimation : IDisposable
         {
             var path = Path.Combine(AppContext.BaseDirectory, "resources", "status", fileName);
             using var sheet = new System.Drawing.Bitmap(path);
-            foreach (var source in SpriteFrameDetector.Find(sheet, 8))
+            var frameCount = sheet.Width == sheet.Height ? 1 : 8;
+            foreach (var source in SpriteFrameDetector.Find(sheet, frameCount))
             {
                 using var bitmap = new System.Drawing.Bitmap(32, 32, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
                 using (var graphics = System.Drawing.Graphics.FromImage(bitmap))
