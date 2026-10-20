@@ -10,20 +10,23 @@ public sealed class AudioPipeline(IAudioCaptureService audio, IStreamingSpeechRe
     public async Task RunAsync(string? deviceId, Task released, Action audioReady, CancellationToken cancellationToken)
     {
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        // ponytail: at most 10 seconds/320 KB of unsent PCM; sustained network stalls abort instead of dropping speech.
-        var queue = Channel.CreateBounded<AudioChunk>(new BoundedChannelOptions(500)
-        { SingleReader = true, SingleWriter = true, FullMode = BoundedChannelFullMode.Wait });
+        // Recording duration is limited by the coordinator; retain all captured speech while uploads catch up.
+        var queue = Channel.CreateUnbounded<AudioChunk>(new UnboundedChannelOptions
+        { SingleReader = true, SingleWriter = true });
         var pendingBytes = 0;
         Exception? overflow = null;
         void OnAudio(object? sender, AudioChunk chunk)
         {
             metrics.Mark(sessionId, PerformanceEvent.FirstAudioFrame);
-            if (chunk.Pcm16.Length % 2 != 0 || Interlocked.Add(ref pendingBytes, chunk.Pcm16.Length) > 320000 || !queue.Writer.TryWrite(chunk))
+            if (chunk.Pcm16.Length % 2 != 0)
             {
-                overflow = new IOException("音频发送积压，已停止本次识别，请重试。");
+                overflow = new IOException("麦克风音频数据格式异常，请重试。");
                 queue.Writer.TryComplete(overflow);
                 lifetime.Cancel();
+                return;
             }
+            Interlocked.Add(ref pendingBytes, chunk.Pcm16.Length);
+            if (!queue.Writer.TryWrite(chunk)) Interlocked.Add(ref pendingBytes, -chunk.Pcm16.Length);
         }
         audio.AudioAvailable += OnAudio;
         Task? stopper = null;

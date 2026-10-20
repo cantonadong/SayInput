@@ -1,4 +1,4 @@
-param([string]$Exe = 'artifacts/SayInput-1.3.0-win-x64/SayInput.exe', [int]$IdleSeconds = 300)
+param([string]$Exe = 'artifacts/SayInput-1.4.0-win-x64/SayInput.exe', [int]$IdleSeconds = 300)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes

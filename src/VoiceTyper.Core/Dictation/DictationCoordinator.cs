@@ -35,7 +35,7 @@ public sealed class DictationCoordinator(Func<IAudioCaptureService> createAudio,
             if (target is null) { metrics.Clear(id); return false; }
             metrics.Mark(id, PerformanceEvent.TargetCaptured);
             active = id;
-            lifetime = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+            lifetime = new CancellationTokenSource();
             release = new(TaskCreationOptions.RunContinuationsAsynchronously);
             var token = lifetime.Token;
             var released = release.Task;
@@ -64,6 +64,9 @@ public sealed class DictationCoordinator(Func<IAudioCaptureService> createAudio,
         var outcome = DictationCompletion.Succeeded;
         IAudioCaptureService? audio = null;
         IStreamingSpeechRecognizer? speech = null;
+        Timer? recordingLimit = null;
+        Timer? drainLimit = null;
+        var timedOut = 0;
         void Partial(object? sender, SpeechRecognitionEvent update)
         {
             if (update.SessionId != id || ct.IsCancellationRequested) return;
@@ -80,6 +83,23 @@ public sealed class DictationCoordinator(Func<IAudioCaptureService> createAudio,
             var pipeline = new AudioPipeline(audio, speech, metrics, id);
             await pipeline.RunAsync(deviceId, released, () =>
             {
+                drainLimit = new Timer(_ =>
+                {
+                    lock (gate)
+                    {
+                        if (active != id) return;
+                        Interlocked.Exchange(ref timedOut, 1);
+                        lifetime?.Cancel();
+                    }
+                }, null, TimeSpan.FromMinutes(12), Timeout.InfiniteTimeSpan);
+                recordingLimit = new Timer(_ =>
+                {
+                    lock (gate)
+                    {
+                        if (active != id) return;
+                        Release();
+                    }
+                }, null, TimeSpan.FromMinutes(10), Timeout.InfiniteTimeSpan);
                 SetState(id, released.IsCompleted ? DictationState.Finalizing : DictationState.Recording);
                 overlay.Show(id);
                 metrics.Mark(id, PerformanceEvent.OverlayShown);
@@ -101,7 +121,16 @@ public sealed class DictationCoordinator(Func<IAudioCaptureService> createAudio,
                 if (!result.Succeeded) throw new InvalidOperationException(result.ErrorMessage ?? "输入失败，请从设置窗口复制本次文字。");
             }
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested) { outcome = DictationCompletion.NoSpeech; }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            if (Volatile.Read(ref timedOut) != 0)
+            {
+                failure = "音频上传或识别超时，请检查网络后重试。";
+                SetState(id, DictationState.Failed);
+                outcome = DictationCompletion.Failed;
+            }
+            else outcome = DictationCompletion.NoSpeech;
+        }
         catch (Exception error)
         {
             // Adapter messages are bounded and credential-free; never include arbitrary provider response bodies.
@@ -112,6 +141,8 @@ public sealed class DictationCoordinator(Func<IAudioCaptureService> createAudio,
         }
         finally
         {
+            recordingLimit?.Dispose();
+            drainLimit?.Dispose();
             if (speech is not null)
             {
                 speech.RecognitionUpdated -= Partial;
