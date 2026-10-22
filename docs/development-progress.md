@@ -8,6 +8,7 @@
 - artifacts/SayInput-1.5.0-win-x64.zip仅含SayInput.exe、SHA256SUMS.txt两个条目，已核对压缩包内EXE哈希与交付一致，不含配置、凭据、录音、日志。ZIP的SHA-256为caeb309a97fcf95a4576e428a9561635246c34288cdce891c9d8a8fc91addb54；外部校验文件为artifacts/SHA256SUMS-1.5.0.txt。
 - 按用户要求未运行测试、启动应用或调用云端。Release说明明确真实语音、自动上屏、延迟与像素/DPI对齐仍待人工验收，不将构建视为运行验证。
 - Release地址：https://github.com/cantonadong/SayInput/releases/tag/v1.5.0 。发布后需核对远端main/tag提交、公开状态和附件摘要。
+- 发布核对完成：发行提交a574884ef2967191fc497f65e8ee84ccfe2e0020已推送main，远端v1.5.0标签指向该提交；Release公开、非草稿、非预发布。远端ZIP为799146字节，GitHub摘要与本地caeb309a97fcf95a4576e428a9561635246c34288cdce891c9d8a8fc91addb54一致，两个附件均已上传。本条发布结果随后以独立文档提交同步main，发行标签保持原源码提交。
 
 ## 2026-10-22：修复设置页语音识别 Tab 被背景遮挡
 
