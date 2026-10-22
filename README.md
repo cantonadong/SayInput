@@ -1,139 +1,57 @@
-<p align="center">
-  <img src="icon/icon.png" alt="SayInput" width="96">
-</p>
+# SayInput
 
-<h1 align="center">SayInput</h1>
+Windows 10/11 x64 原生语音输入工具，使用 Rust 与 Windows 系统 API，无需安装 .NET。图标和提示音内嵌，程序入口为 [artifacts/SayInput.exe](artifacts/SayInput.exe)。
 
-<p align="center">轻量、便携的 Windows 流式语音输入工具</p>
-
-<p align="center">
-  <a href="https://github.com/cantonadong/SayInput/releases/latest">下载最新版</a>
-  ·
-  <a href="docs/compatibility.md">兼容性</a>
-  ·
-  <a href="docs/performance.md">性能记录</a>
-</p>
-
-## 功能
-
-SayInput 将麦克风语音实时发送到火山引擎“流式识别 2.0”，识别完成后把文字输入到当前应用。
-
-- 使用全局右 Alt 键录音，可选择“按住说话”或“点击开始、再次点击结束”
-- 录音时显示居中波形和最多三行实时识别文字
-- 支持 `Esc` 取消当前录音，并立即释放麦克风
-- 录音期间静音其他系统输出，结束或取消后自动恢复
-- 托盘常驻，并用不同图标表示录音和转写状态
-- 托盘菜单可复制最近一次识别的完整文本，退出后清空
-- 可选开机启动、实时文字和麦克风设备
-- 本地滚动保留最近 20 条 WAV 录音
-- API Key 使用 Windows DPAPI 加密
-- 自包含 Windows x64 便携包，无需安装 .NET
-
-## 下载
-
-当前正式版本为 **v1.4.0**。
-
-从 [GitHub Releases](https://github.com/cantonadong/SayInput/releases/latest) 下载 `SayInput-1.4.0-win-x64.zip`，解压完整目录后运行 `SayInput.exe`。请勿只复制 EXE，运行所需文件都在发行目录内。
-
-SHA-256：
-
-```text
-0a26c4b39986f2d65086554c57203d48af9566ce931022f6e50cc8d7a2148adf
-```
-
-支持 Windows 10/11 x64。
-
-## 配置
-
-1. 在火山引擎开通“流式识别 2.0”，取得 API Key。
-2. 启动 SayInput，在“语音识别”页填写：
-   - 服务商：火山引擎
-   - API Key：火山引擎控制台提供的密钥
-   - Resource ID：默认 `volc.seedasr.sauc.duration`
-3. 选择麦克风，可点击“测试”查看输入音量，再点击“测试连接”。
-4. 点击底部“保存”。
-
-如果 SimpleWall 刚放行 SayInput，请完全退出程序并重新启动，规则才会对新进程生效。
+下载 [v1.5.0 Windows x64](https://github.com/cantonadong/SayInput/releases/tag/v1.5.0)。ZIP 仅包含 `SayInput.exe` 和 SHA-256 校验文件；解压后运行，升级时保留原有 `data` 与 `recordings` 目录。
 
 ## 使用
 
-先在目标应用中点击需要输入文字的位置，然后使用右 Alt：
+1. 运行 `artifacts/SayInput.exe`，填写火山引擎流式识别 2.0 的 API Key，Resource ID 默认 `volc.seedasr.sauc.duration`，保存。
+2. 选择有输入信号的麦克风，可先做本地音量测试和连接测试。
+3. 点击其他应用的输入位置，用右 Alt 录音：点按模式再次按下结束；按住模式松开结束；Esc 取消。
+4. 完成后将终稿输入原窗口。无法输入时，可从托盘复制最后文本。
 
-- **按住模式**：按住右 Alt 开始录音，松开后停止并转写。
-- **点击模式**：按一下右 Alt 开始录音，再按一下停止并转写。
-- **取消录音**：录音过程中按 `Esc`，本次录音与识别会被取消。
+支持实时三行文字、录音音量波形、托盘状态、开机启动和录音期间的系统输出静音恢复。设置窗口关闭或最小化后收进托盘；退出请使用设置或托盘的“退出”。
 
-识别结束后，SayInput 会把最终文字一次性输入到录音开始时选中的窗口。关闭设置窗口只会将程序收进系统托盘；需要彻底关闭时，请点击设置页“退出”或使用托盘菜单。
-
-没有录到有效声音时不会弹出提示，可直接再次录音。
+界面语言启动时跟随 Windows 系统界面语言：中文系统使用简体中文，其他系统使用英文。设置页没有语言选择项，旧配置中的 Language 不再决定界面语言。
 
 ## 便携数据
 
-SayInput 的配置、凭据和录音都保存在 EXE 同级目录：
-
 ```text
-SayInput/
+artifacts/
 ├─ SayInput.exe
 ├─ data/
 │  ├─ settings.json
 │  └─ credentials/
-├─ recordings/
-└─ resources/
+└─ recordings/
 ```
 
-- API Key 通过当前 Windows 用户的 DPAPI 加密，复制到其他用户或电脑后不能直接解密。
-- `recordings` 只保留最近 20 条 WAV。
-- SayInput 不在本地保存转写文字。
-- 升级时可将新版本解压覆盖到原目录，以继续使用现有配置。
+API Key 使用当前 Windows 用户的 DPAPI 加密，移动到其他用户或电脑后需要重新输入。录音滚动保留最近二十条 WAV；转写文字仅保留在当前进程内存中。升级时覆盖同一个 EXE，保留数据目录。
 
-## 常见问题
+公开分发仅需 EXE，不要打包自己的 data、recordings 或凭据文件。SimpleWall 新放行 EXE 后，需完全退出所有 SayInput 进程再重新启动。
 
-**麦克风测试没有音量，但其他软件可以录音**
+当前 Rust 版本仍需真实桌面与语音验收。已编译和静态检查不代表已完成运行验收；具体步骤见 [人工验收](docs/rust-manual-acceptance.md)。历史 C# 发行版仍可从 [GitHub Releases](https://github.com/cantonadong/SayInput/releases) 获取。
 
-在 SayInput 的麦克风下拉框中选择正确的输入设备。Windows 默认输入设备可能与其他软件自行选择的设备不同。
+## 构建
 
-**测试连接失败或一直没有识别结果**
-
-确认 API Key、Resource ID 和账号开通的服务匹配。流式识别 2.0 小时版默认使用 `volc.seedasr.sauc.duration`。检查防火墙是否允许 `SayInput.exe` 访问网络；SimpleWall 放行后需要重启程序。
-
-**已勾选开机启动，但任务管理器中没有启动项**
-
-点击底部“保存”，然后重新启动一次 SayInput。程序启动和保存时都会校准当前用户的启动项，并清理旧版 `VoiceTyper` 启动项。
-
-**为什么内存占用比某些同类工具高**
-
-发行包是自包含的 .NET 8 WPF 应用，运行时和界面框架会占用一部分常驻内存。程序空闲时不会持续高频轮询；实际性能记录见 [docs/performance.md](docs/performance.md)。
-
-## 隐私与网络
-
-录音会发送到火山引擎进行语音识别，因此使用行为同时受火山引擎账号配置和服务条款约束。本地只保存滚动录音，不保存转写文字。正式发行流程会扫描发布目录与 ZIP，阻止 `data`、`recordings` 和 `key.txt` 被打包。
-
-仓库中的测试凭据全部为虚构值；请勿提交真实 API Key。
-
-## 开发
-
-需要 Windows x64 和 .NET 8 SDK。
+需要 Windows GNU Rust 工具链及 LLVM-MinGW/LLD。脚本默认复用本机已有工具目录，可用 `-ToolchainPath` 指定替代目录。
 
 ```powershell
-dotnet restore
-dotnet build VoiceTyper.sln -c Release
-dotnet test VoiceTyper.sln -c Release --filter "Category!=Hardware"
+# 格式和静态检查，不运行测试
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-rust.ps1 -Lint
+
+# 编译后停止旧进程，覆盖 artifacts/SayInput.exe，不启动程序
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-rust.ps1
 ```
 
-生成自包含便携包：
+`-BuildOnly` 仅生成 Rust 构建产物，`-CheckOnly` 仅做编译检查。清理构建缓存后首次编译会重新生成 `rust/target`。
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish.ps1
-```
+## 结构
 
-默认输出到 `artifacts/SayInput-1.4.0-win-x64`。项目内部仍保留 `VoiceTyper.*` 工程与命名空间，用户可见产品名和进程名均为 SayInput。
+- `rust/src`：设置、托盘、悬浮窗、热键、采集、识别协议、输入及兼容存储。
+- `icon`、`resources/sounds`：内嵌构建素材。
+- `scripts/build-rust.ps1`：构建与同路径部署；`generate-icon.ps1`：图标生成。
+- `docs/development-progress.md`：当前交接、验证证据和待办。
+- `docs/volcengine-notes.md`：识别协议参考。
 
-## 项目结构
-
-- `VoiceTyper.Core`：会话状态、音频管线和平台无关接口
-- `VoiceTyper.Windows`：麦克风、热键、窗口捕获、文字注入和 Windows 安全存储
-- `VoiceTyper.Volcengine`：火山引擎流式识别协议
-- `VoiceTyper.App`：WPF 设置页、悬浮窗、托盘与运行时组装
-- `tests`：Core、Windows 和火山引擎协议测试
-
-开发规范与历史记录见 [DEVELOPMENT.md](DEVELOPMENT.md) 和 [开发进展](docs/development-progress.md)。
+未获用户明确要求时，不运行测试或自动启动应用。开发直接使用 main，提交时按文件选择源码和文档，避免纳入便携数据。

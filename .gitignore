@@ -1,1 +1,5 @@
 /key.txt
+/rust/target/
+/artifacts/data/
+/artifacts/recordings/
+/artifacts/*.exe

@@ -1,5 +1,47 @@
 # VoiceTyper 开发进展
 
+## 2026-10-22：v1.5.0 发布
+
+- 用户授权 push repo、创建 Release，并将版本增加0.1；从1.4.0升至1.5.0。Cargo清单/锁文件、PE资源、manifest、网络客户端标识及README已同步。直接在main提交Rust迁移与本轮界面/会话修正，逐项纳入旧.NET源码和开发文档的已有删除，不暂存历史bin/obj或artifacts变动；保留全部便携数据。
+- 正常Windows用户的gh auth status确认现有keyring有效；受限上下文仍401，未重新登录。git fetch后HEAD与origin/main为0/0，无需合并。
+- cargo fmt检查与Clippy通过；scripts/build-rust.ps1 Release构建/同路径覆盖退出0，FileVersion=1.5.0.0、ProductVersion=1.5.0 Rust。EXE大小1512448字节，SHA-256为eade290a1e765fa27534dc226e821832e9310bda10160a86b2d06ce7be42c075。
+- artifacts/SayInput-1.5.0-win-x64.zip仅含SayInput.exe、SHA256SUMS.txt两个条目，已核对压缩包内EXE哈希与交付一致，不含配置、凭据、录音、日志。ZIP的SHA-256为caeb309a97fcf95a4576e428a9561635246c34288cdce891c9d8a8fc91addb54；外部校验文件为artifacts/SHA256SUMS-1.5.0.txt。
+- 按用户要求未运行测试、启动应用或调用云端。Release说明明确真实语音、自动上屏、延迟与像素/DPI对齐仍待人工验收，不将构建视为运行验证。
+- Release地址：https://github.com/cantonadong/SayInput/releases/tag/v1.5.0 。发布后需核对远端main/tag提交、公开状态和附件摘要。
+
+## 2026-10-22：修复设置页语音识别 Tab 被背景遮挡
+
+- 用户澄清“语音识别内容空白”是设置页 Tab 内表单空白，不是转写结果。上一轮将反馈误解为云端识别问题；该反馈本身不能证明网络链路有故障。
+- 根因：白色 owner-draw 标签页面板与表单控件共用设置窗口父级，创建顺序使面板处于表单上方，WS_CLIPSIBLINGS 将后面的表单裁掉。本轮仅在所有设置控件创建完后，通过 SetWindowPos(HWND_BOTTOM) 将 ID130 背景面板压到同级窗口底部；保留位置、尺寸及白底。窗口重开及 DPI 重建均复用该创建路径。
+- 验证：cargo fmt；scripts/build-rust.ps1 -Lint（含 Clippy）退出0；scripts/build-rust.ps1 Release 构建与原 EXE 覆盖退出0。当前 artifacts/SayInput.exe 大小1512448字节，SHA-256为EAC26C5FA0C11F02A6032258F486F68001001F587E0201E28E2441EC5B4BA633，部署脚本已核对构建与交付哈希。
+- 按用户要求未运行测试或自动启动应用；未读取凭据、改动识别逻辑或删除现有数据。下一步：用户重新运行同一 EXE，确认语音识别 Tab 中服务商、API Key、Resource ID、编辑与测试连接按钮重新可见；实际界面与 DPI 仍待人工确认。
+
+## 2026-10-22：继续排查识别内容空白
+
+- 用户反馈识别内容全部空白。读取最近会话的安全阶段日志，看到采集停止和归档成功，但没有 final-received/input-start/session-result；读取期间用户开始了新会话，日志已按设计覆盖。因此现有证据指向尚未向协调器交付终稿，不能认定为服务端已返回空文本，也不能仅归因于输入失败。
+- 排查发现升级 WebSocket 时传入零上下文，之后才通过通用 attach 设置上下文。新增专用 upgrade 路径，在 WinHttpWebSocketCompleteUpgrade 创建句柄时即传入独立 Notifications 的非零上下文，并保留到 HANDLE_CLOSING；不再依赖后设上下文对 WebSocket 操作生效。保留异步操作结束前缓冲区的生命周期保护。
+- 在现有 last-session.log 补充固定网络阶段名：连接开始/成功、配置发送/确认、尾帧发送、接收结束或失败。不记录响应内容或凭据。本轮没有修改识别文本解析、音频内容或界面。
+- cargo fmt 与 scripts/build-rust.ps1 -Lint 通过；scripts/build-rust.ps1 Release 构建和原路径覆盖退出0，已终止旧进程。当前 artifacts/SayInput.exe 大小1512448字节，SHA-256为5CB0A153C7876F0388E624598D77E2DB51A84123F3BD7AF347C33F0F47B8F14F，构建与交付哈希一致。
+- 未运行测试、启动应用或自行调用真实云端；此修改尚待用户录音验证，不能把代码问题的修正当作识别已经恢复的实测证据。下一步：用户重新运行同一 EXE 完成一次录音；若仍空白，读取新增阶段记录确定卡在连接、配置确认、音频发送还是终稿接收。
+
+## 2026-10-22：处理 Rust 版界面灰底、字体与会话阻塞
+
+- 用户重申四项回归：转写窗和设置页需按旧版样式及 DPI/字号还原、Alt 开始结束变慢、识别后不能自动上屏；特别指出设置元素出现灰底。本轮直接从 HEAD 读取旧 MainWindow.xaml、RecordingOverlay.xaml/代码及会话/输入实现对照，未还原或清理已有删除文件。
+- 设置页补 WM_CTLCOLORSTATIC/BTN/EDIT，标签、复选框及编辑控件统一白底；图标绘制先清白底。标签页改为在现有 owner-draw 路径绘制白色内容面板、边框及两个标题，避免原生 Tab 默认内容背景与白色窗口不一致。控件使用 WS_CLIPSIBLINGS 避免面板重绘覆盖相邻控件。
+- 字体改为通过 NONCLIENTMETRICS 读取系统消息字体，对齐旧 WPF 继承的字体族，保留12/16/17逻辑字号；标题与选项间距按实际字体测量。悬浮窗不再拿系统 DPI 代替自身 DPI，处理窗口 DPI 变化并重建字体；继续保留480宽、24行高、圆角18、22根波形及三行最新文字等旧版参数。
+- 会话连接与麦克风初始化并行。停止时先停止采集并标记磁盘音频已结束，再恢复各输出设备静音，发送结束无需等待静音恢复。终稿通过通道移交时同时保留网络连接所有权，输入后再释放，避免成功结果等待连接析构；归档错误仍报告，但不再阻止非空终稿尝试输入。
+- 增加 data/last-session.log，每次新会话覆盖，只记录固定阶段名、相对耗时及固定错误枚举；不记录转写、音频、设备名、窗口标题或凭据。用于区分没有获得终稿、输入失败和清理耗时，不构成已经定位所有上屏故障的证据。
+- 验证：cargo fmt；scripts/build-rust.ps1 -Lint（fmt --check、Clippy -- -D warnings）退出0；scripts/build-rust.ps1 Release 构建和原路径覆盖退出0。最终 artifacts/SayInput.exe 大小1507840字节，SHA-256为445ECA81001309C0CC601B80BCCFD040DBFDEF52277386BF12104756A8261313，脚本核对与构建产物一致。首轮 Clippy 发现 GetSysColor 返回值需包装 COLORREF，已修正后重新检查通过。
+- 按用户规则未运行测试、启动应用、读取真实会话数据或调用云端；未推送。现阶段只确认源码修正与构建，不能宣称像素100%一致、实际延迟改善或用户遇到的自动上屏问题已经完全解决。下一步：用户用同一 EXE 核对灰底与缩放，完成一次记事本录音；若仍不上屏，结合托盘能否复制本次完整文字及该次 last-session.log 继续定位。
+
+## 2026-10-22：继续核对 Rust 候选并构建
+
+- 当前分支为 main。现有工作区已将入口统一为 artifacts/SayInput.exe，README、构建脚本和人工验收清单均使用该路径；此前记录中的版本目录入口已不是当前交付入口。保留已有源码删除、Rust 文件、便携数据及录音，本轮未进一步清理或提交。
+- 当前源码界面语言跟随 GetUserDefaultUILanguage：中文使用简体中文，其余英文。本轮未修改产品源码。
+- 执行 scripts/build-rust.ps1 -Lint，fmt --check 与 Clippy --release --locked --offline -- -D warnings 退出码0。执行 scripts/build-rust.ps1，Release 构建和同路径覆盖退出码0，脚本在覆盖前终止 SayInput 进程并等待退出，随后核对构建与交付文件哈希一致。
+- 当前 EXE 为 artifacts/SayInput.exe，大小1496064字节，SHA-256为538B6481CC971ABCC148FA4DE543486C1D0F4FE07102BC9A474E6B73793E5A0F。该哈希取代此前候选记录；二进制大小不代表运行内存。
+- 按用户要求未运行测试、未启动程序、未调用云端或采样性能。下一步：用户运行当前入口，按 docs/rust-manual-acceptance.md 验收实际麦克风、旧凭据、热键、系统静音恢复、三行文字及最终输入；长录音、界面缩放与实际性能仍待验证。
+
 ## 2026-09-16：清理构建产物并确认最终可用程序
 
 - 清理了 `src` 与 `tests` 下 14 个可重新生成的 `bin/obj` 目录，共约 198.89 MB；同时删除了已被正式发布包取代的 `artifacts/hotkey-test`、`artifacts/window-test` 和 `artifacts/voice-test`。保留源码、便携数据、录音、根目录凭据文件及最终发布包。
@@ -415,3 +457,29 @@
 - 目录及 ZIP 隐私扫描通过，不含 data、recordings、key.txt；ZIP 共 477 个文件、70734318 字节，SHA-256 为 0a26c4b39986f2d65086554c57203d48af9566ce931022f6e50cc8d7a2148adf；校验文件 artifacts/SHA256SUMS-1.4.0.txt。
 - 复用正常 Windows 用户 keyring 凭据，gh auth status 有效；fetch 后 HEAD 与 origin/main 无差异。仅暂存七个有意源码、脚本和文档，保留所有无关生成产物及用户数据。
 - Release 目标地址：https://github.com/cantonadong/SayInput/releases/tag/v1.4.0 。下一步：核对远端发布状态、main/tag 提交和附件摘要；长录音及网络积压仍待用户人工验收。
+
+## 2026-10-21：Rust 原生重写设计
+
+- 用户要求移除 .NET/WPF/WinForms，以 Rust 重写，保留英文与简体中文、现有功能，优化内存与 CPU。已对照当前设置、凭据存储、便携路径、README 和历史记录梳理迁移范围。
+- 新增 docs/superpowers/specs/2026-10-21-rust-native-design.md，包含 Win32 原生界面方案、功能兼容清单、DPAPI 字节兼容、事件驱动生命周期、磁盘承接音频积压及性能目标。当前为待审阅设计，尚未修改产品源码或替换 EXE。
+- 未构建、未运行测试、未启动或终止现有程序；保留现有工作区变更及产物。性能指标为目标，不是实测结果。
+- 下一步：用户审阅规格后编写实现计划，再进入迁移。
+
+## 2026-10-21：Rust 重写规格批准与实现计划
+
+- 用户已批准 Rust 原生重写规格。新增 docs/superpowers/plans/2026-10-21-rust-native.md，按存储兼容、音频、协议、桌面集成、会话组装和最终交付分六阶段，明确模块接口及人工验收。
+- 已确认当前分支 main，rustc/cargo 均为 1.99.0；本轮未安装依赖、未修改产品源码、未构建或运行测试。计划中的性能数字仍为目标。
+- 计划明确保持旧 DPAPI entropy/文件名兼容、数值枚举、资源嵌入、静态 CRT、磁盘承接积压、同路径 EXE 覆盖及原 EXE 的 .bak 备份。保留已有产物和用户数据。
+- 验证：对设计、实现计划和进展记录执行限定范围 git diff --check；下一步等待用户审阅计划并选择本会话直接执行或子代理方式。
+
+## 2026-10-21：Rust 原生重写候选交付
+
+- 用户批准直接执行实现计划。新增 rust 工程，以原生 Win32/Common Controls 替换 WPF/WinForms；系统 WASAPI 转换为 16 kHz PCM16 mono，WinHTTP 异步 WebSocket 使用系统 TLS，图标与四种提示音内嵌，界面仅英文和简体中文。
+- 迁移会话控制、右 Alt 点按/按住、Esc 取消、逐端点静音恢复、三行实时文字、托盘状态/启用/复制、麦克风与业务连接测试、凭据编辑/全局保存、启动项校准、单实例、录音归档及输入失败恢复。保留旧 JSON 字段、数值枚举、未知字段和 DPAPI SHA-256 entropy/文件名格式；未读取真实凭据进行开发验证。
+- 性能实现采用阻塞消息/事件等待、录音线程按需启动、200ms 发包、共享磁盘 WAV 承接网络积压、音量/partial 更新限频、关闭设置释放控件/GDI、会话结束释放网络/音频资源。保持600秒正常停止、720秒兜底及15秒终稿等待。实际内存/CPU降幅尚未测量。
+- 运行一次独立只读源码审查，修复 WinHTTP 跨方向错误导致缓冲提前释放、关闭通知丢唤醒、托盘嵌套消息丢失、剪贴板 NULL owner 和事务竞态、取消后仍可能注入、云端失败丢正常录音、WASAPI 尾部未排空等问题；实际磁盘错误类型也保留。短录音在握手前完成时，发送读取路径与归档改名同步，避免找不到音频文件。
+- 环境裁决：本机无 MSVC，PATH 中 link.exe 属于 Git。使用已安装 GNU Rust 与已有 LLVM-MinGW/LLD，系统 msvcrt.dll 无需额外分发。新增脚本支持 ToolchainPath；未修改其他仓库或系统 PATH 持久设置。旧 C# 源码保留作为行为参考。
+- 最终验证：cargo fmt 完成；scripts/build-rust.ps1 -Lint（fmt --check、Clippy -- -D warnings）退出0；正常用户运行 scripts/build-rust.ps1，Release 编译及部署退出0。首轮受限环境覆盖因正常用户进程仍占用入口失败，获批正常用户执行后成功；脚本现等待旧进程实际退出再覆盖。
+- 交付入口仍为 artifacts/SayInput-1.2.0-win-x64/SayInput.exe，ProductVersion=1.4.0 Rust，大小1,412,096字节，SHA-256=38B2B894917C8E9EB97F8B3A7E307DE3EE8EAB42362C64C6598063CC91E8D291。原EXE保存为同目录 SayInput.exe.pre-rust.bak，未移除 data、recordings、旧 DLL 或其他工作区产物。
+- PE 静态导入仅为 Windows 系统 DLL，不含 .NET/CLR、浏览器或需另行分发的运行库；构建与交付哈希一致。PowerShell 脚本解析通过；限定范围源码/文档空白检查通过。按用户规则未运行测试、未启动程序、未开展云端或性能采样；无推送/新 Release。
+- 详细状态与审查修复见 docs/rust-migration-checklist.md，人工验收见 docs/rust-manual-acceptance.md。下一步：用户运行原入口，首先核对旧配置/凭据、实际麦克风、两种热键模式、静音恢复、三行最新文字和最终输入，再核对长录音/网络积压及内存CPU样本；未做人工验收前不宣称完整运行兼容或量化性能收益。

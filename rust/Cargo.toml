@@ -1,0 +1,23 @@
+[package]
+name = "sayinput"
+version = "1.5.0"
+edition = "2024"
+rust-version = "1.99"
+
+[[bin]]
+name = "SayInput"
+path = "src/main.rs"
+
+[dependencies]
+windows = { version = "=0.62.2", features = ["Win32_Foundation", "Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_System_Variant", "Win32_System_Threading", "Win32_System_LibraryLoader", "Win32_System_Memory", "Win32_System_Registry", "Win32_System_DataExchange", "Win32_System_SystemServices", "Win32_Security_Cryptography", "Win32_Security", "Win32_Media_Audio", "Win32_Media_Audio_Endpoints", "Win32_Media_Multimedia", "Win32_Networking_WinHttp", "Win32_UI_WindowsAndMessaging", "Win32_UI_Shell", "Win32_UI_Shell_PropertiesSystem", "Win32_UI_Controls", "Win32_UI_HiDpi", "Win32_UI_Input_KeyboardAndMouse", "Win32_Graphics_Gdi", "Win32_Graphics_GdiPlus", "Win32_Globalization", "Win32_Devices_FunctionDiscovery", "Win32_Storage_FileSystem"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+flate2 = "1"
+zeroize = "1"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = "debuginfo"
+panic = "abort"
